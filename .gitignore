@@ -17,6 +17,9 @@ Thumbs.db
 
 # Dependencies
 vendor/
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 
 # Test
 *.test

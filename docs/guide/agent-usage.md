@@ -48,7 +48,7 @@ qdoc --json go "release notes for Go 1.22" | jq '.answer'
 
 To add qdoc as a skill for your coding agent:
 
-1. Copy [skill.md](/skill) to your agent's skills directory
+1. Copy <a href="https://github.com/ibrhr/qdoc/blob/main/skill.md">skill.md</a> to your agent's skills directory
 2. The agent will now know how to use `qdoc` to query documentation
 
 ### opencode

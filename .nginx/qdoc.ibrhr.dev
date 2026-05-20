@@ -1,0 +1,20 @@
+server {
+    listen 443 ssl;
+    server_name qdoc.ibrhr.dev;
+
+    ssl_certificate /etc/ssl/cloudflare/qdoc.ibrhr.dev.pem;
+    ssl_certificate_key /etc/ssl/cloudflare/qdoc.ibrhr.dev.key;
+
+    root /var/www/qdoc.ibrhr.dev;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+
+server {
+    listen 80;
+    server_name qdoc.ibrhr.dev;
+    return 301 https://qdoc.ibrhr.dev$request_uri;
+}
