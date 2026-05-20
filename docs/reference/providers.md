@@ -10,23 +10,9 @@ qdoc set key openai sk-your-key
 
 | Field | Value |
 |---|---|
-| Default Model | `gpt-4.1` |
+| Default Model | `gpt-5.5` |
 | API URL | `https://api.openai.com/v1` |
 | Env Var | `OPENAI_API_KEY` |
-
-### OpenRouter
-
-```bash
-qdoc set key openrouter sk-or-v1-your-key
-```
-
-| Field | Value |
-|---|---|
-| Default Model | `openai/gpt-4.1` |
-| API URL | `https://openrouter.ai/api/v1` |
-| Env Var | `OPENROUTER_API_KEY` |
-
-OpenRouter gives access to hundreds of models through a single API.
 
 ### DeepSeek
 
@@ -36,7 +22,7 @@ qdoc set key deepseek sk-your-key
 
 | Field | Value |
 |---|---|
-| Default Model | `deepseek-chat` |
+| Default Model | `deepseek-v4-flash` |
 | API URL | `https://api.deepseek.com/v1` |
 | Env Var | `DEEPSEEK_API_KEY` |
 
@@ -49,7 +35,7 @@ qdoc set key opencode-zen sk-your-key
 | Field | Value |
 |---|---|
 | Default Model | `gpt-5.4-mini` |
-| API URL | `https://zen.opencode.ai/v1` |
+| API URL | `https://opencode.ai/zen/v1` |
 | Env Var | `OPENCODE_ZEN_API_KEY` |
 
 ### Opencode Go
@@ -61,7 +47,7 @@ qdoc set key opencode-go sk-your-key
 | Field | Value |
 |---|---|
 | Default Model | `deepseek-v4-flash-free` |
-| API URL | `https://go.opencode.ai/v1` |
+| API URL | `https://opencode.ai/zen/go/v1` |
 | Env Var | `OPENCODE_GO_API_KEY` |
 
 ## Model Selection

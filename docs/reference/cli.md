@@ -57,7 +57,6 @@ qdoc --json go "generics" | jq '.answer'
 | `QDOC_MODEL` | Override model for provider |
 | `QDOC_BASE_URL` | Override API base URL |
 | `OPENAI_API_KEY` | OpenAI API key |
-| `OPENROUTER_API_KEY` | OpenRouter API key |
 | `DEEPSEEK_API_KEY` | DeepSeek API key |
 | `OPENCODE_ZEN_API_KEY` | Opencode Zen API key |
 | `OPENCODE_GO_API_KEY` | Opencode Go API key |

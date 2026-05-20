@@ -28,7 +28,7 @@ features:
     details: Built with Bubble Tea. Interactive provider/model selection, live streaming responses, and a rich TUI for every query.
   - icon: 🔌
     title: Multi-Provider
-    details: OpenAI, OpenRouter, DeepSeek, and more. Just set an API key and go.
+    details: OpenAI, DeepSeek, and Opencode gateways. Just set an API key and go.
   - icon: 📚
     title: Any Docs Source
     details: Built-in sources for Go and FastAPI docs. Point it at any local directory of markdown files too.

@@ -192,7 +192,7 @@ func handleSet(args []string) {
 	if len(args) < 2 {
 		fmt.Fprintf(os.Stderr, "qdoc set <key|provider|model> <name> [value]\n\n")
 		fmt.Fprintf(os.Stderr, "Examples:\n")
-		fmt.Fprintf(os.Stderr, "  qdoc set provider openrouter\n")
+		fmt.Fprintf(os.Stderr, "  qdoc set provider openai\n")
 		fmt.Fprintf(os.Stderr, "  qdoc set key openai sk-abc123...\n")
 		os.Exit(1)
 	}
@@ -211,7 +211,7 @@ func handleSet(args []string) {
 		provName := args[1]
 		if _, found := provider.Find(provName); !found {
 			fmt.Fprintf(os.Stderr, "qdoc: unknown provider %q\n", provName)
-			fmt.Fprintf(os.Stderr, "Available: openai, openrouter, deepseek, opencode-zen, opencode-go\n")
+			fmt.Fprintf(os.Stderr, "Available: openai, deepseek, opencode-zen, opencode-go\n")
 			os.Exit(1)
 		}
 
@@ -245,7 +245,7 @@ func handleSet(args []string) {
 		provName := args[1]
 		if _, found := provider.Find(provName); !found {
 			fmt.Fprintf(os.Stderr, "qdoc: unknown provider %q\n", provName)
-			fmt.Fprintf(os.Stderr, "Available: openai, openrouter, deepseek, opencode-zen, opencode-go\n")
+			fmt.Fprintf(os.Stderr, "Available: openai, deepseek, opencode-zen, opencode-go\n")
 			os.Exit(1)
 		}
 		cfg.Provider = provName
@@ -264,7 +264,7 @@ func handleSet(args []string) {
 		provName := args[1]
 		if _, found := provider.Find(provName); !found {
 			fmt.Fprintf(os.Stderr, "qdoc: unknown provider %q\n", provName)
-			fmt.Fprintf(os.Stderr, "Available: openai, openrouter, deepseek, opencode-zen, opencode-go\n")
+			fmt.Fprintf(os.Stderr, "Available: openai, deepseek, opencode-zen, opencode-go\n")
 			os.Exit(1)
 		}
 		if cfg.Models == nil {

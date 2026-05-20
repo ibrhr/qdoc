@@ -39,13 +39,12 @@ qdoc model                  # pick a model
 
 | Provider | Models |
 |---|---|
-| `openai` | gpt-4.1, gpt-4.1-mini, gpt-4o, gpt-5 |
-| `openrouter` | Claude Sonnet 4, Gemini 2.5 Pro, Llama 4, +300 models |
-| `deepseek` | deepseek-chat, deepseek-reasoner |
-| `opencode-zen` | GPT 5.x, Claude, Gemini, Qwen |
-| `opencode-go` | deepseek-v4-flash, qwen, GLM (low cost) |
+| `openai` | gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.4-nano |
+| `deepseek` | deepseek-v4-flash, deepseek-v4-pro |
+| `opencode-zen` | GPT 5.5, GPT 5.4, Claude Opus 4.x, Gemini, Qwen, MiniMax, GLM, Kimi |
+| `opencode-go` | deepseek-v4, qwen, minimax, GLM, Kimi, MiMo (low cost) |
 
-Or use env vars: `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`.
+Or use env vars: `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`.
 
 ## Usage
 
@@ -59,8 +58,8 @@ qdoc ./my-local-docs "deployment guide"
 qdoc provider                  # interactive provider picker
 qdoc model                     # interactive model picker
 qdoc set key openai           # save an API key
-qdoc set provider openrouter   # switch default provider
-qdoc set model openai gpt-5   # set model for a provider
+qdoc set provider openai       # switch default provider
+qdoc set model openai gpt-5.5 # set model for a provider
 
 # Inspect
 qdoc status                    # show current config
@@ -88,7 +87,7 @@ qdoc ./my-docs "query"
 {
   "provider": "openai",
   "keys": { "openai": "sk-..." },
-  "models": { "openai": "gpt-4.1" }
+  "models": { "openai": "gpt-5.5" }
 }
 ```
 
