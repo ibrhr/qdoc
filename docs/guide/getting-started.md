@@ -5,9 +5,10 @@ qdoc queries documentation sources using an LLM. It fetches the doc index, asks 
 ## Quick Start
 
 ```bash
-# 1. Install (choose one)
-go install github.com/ibrhr/qdoc@latest
-# or download a binary from the releases page
+# 1. Install
+curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_linux_amd64.tar.gz
+tar xzf qdoc_linux_amd64.tar.gz && sudo mv qdoc /usr/local/bin/
+# (see /guide/installation for macOS and Windows)
 
 # 2. Set your API key
 qdoc set key openai sk-your-key-here

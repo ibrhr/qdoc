@@ -1,9 +1,13 @@
 # Binary
 /qdoc
+/qdoc_bin
+/qdoc_bin.exe
+/.qdoc_tmp/
 
 # Build artifacts
 /dist/
-/bin/
+/bin/*
+!/bin/qdoc.js
 
 # IDE
 .idea/

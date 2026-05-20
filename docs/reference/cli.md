@@ -63,10 +63,10 @@ qdoc --json go "generics" | jq '.answer'
 
 ## Build-Time Variables
 
-Set via `-ldflags`:
+For custom builds, embed version info via `-ldflags`:
 
 ```bash
-go build -ldflags "-X main.version=0.2.0 -X main.commit=$(git rev-parse --short HEAD)" -o qdoc .
+go build -ldflags "-X main.version=$(git describe --tags) -X main.commit=$(git rev-parse --short HEAD)" -o qdoc .
 ```
 
 ## Exit Codes

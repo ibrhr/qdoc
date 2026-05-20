@@ -22,10 +22,16 @@ $ qdoc go "how do generics work in Go"
 ## Quick start
 
 ```bash
-git clone https://github.com/ibrhr/qdoc
-cd qdoc
-go build -o qdoc .
+# Linux / macOS
+curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_linux_amd64.tar.gz
+tar xzf qdoc_linux_amd64.tar.gz && sudo mv qdoc /usr/local/bin/
+
+# Windows (PowerShell)
+curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_windows_amd64.zip
+tar xzf qdoc_windows_amd64.zip && move qdoc.exe C:\Windows\System32\
 ```
+
+See [all platforms & architectures](https://github.com/ibrhr/qdoc/releases/latest).
 
 ### Set up an API key
 
@@ -101,10 +107,10 @@ qdoc ./my-docs "query"
 
 Resolution order: env vars → config file → built-in defaults.
 
-## Build
+## Build (for developers)
 
 ```bash
-go build ./...
+go build -ldflags "-X main.version=$(git describe --tags) -X main.commit=$(git rev-parse --short HEAD)" -o qdoc .
 go vet ./...
 ```
 
