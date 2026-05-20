@@ -1,5 +1,8 @@
 # AGENTS.md — qdoc
 
+> **Agent for Agents** — documentation research for AI coding agents.
+> One call, one answer. No trial-and-error. No wasted tokens.
+
 ## Build & verify
 
 ```bash
@@ -7,6 +10,17 @@ export PATH=$PATH:/usr/local/go/bin  # Go 1.26.3 lives here
 go build ./...   # builds all packages
 go vet ./...
 ```
+
+## Docs site
+
+```bash
+cd docs
+npm install
+npx vitepress dev    # http://localhost:5173
+npx vitepress build  # output: docs/.vitepress/dist/
+```
+
+The docs site is built with VitePress v1.6+. Config at `docs/.vitepress/config.ts`.
 
 ## Architecture
 
@@ -34,7 +48,7 @@ internal/
     view.go                      # View + query-mode rendering (header, progress, content, footer)
     styles.go                    # Theme colors + lipgloss styles + spinner
     render.go                    # renderMarkdown, renderInlineMarkdown, wordWrap
-    messages.go                  # All tea.Msg types (docIndexMsg, StreamDelta, etc.)
+    messages.go                  # All tea.Msg types (docIndexMsg, streamDeltaMsg, etc.)
   sessionlog/
     log.go                       # Session logging to ~/.config/qdoc/logs/ (per-query .log files)
 ```
@@ -139,26 +153,82 @@ docSource.FetchIndex → provider.ResolveClient → Client.Stream(goroutine)
 
 ## CLI commands
 
+```bash
+# Query docs
+qdoc go "query"              # query Go docs (go.dev/doc)
+qdoc fastapi "query"         # query FastAPI docs (fastapi.tiangolo.com)
+qdoc ./dir "query"           # query local directory of docs
+
+# Headless / agent modes
+qdoc --no-tui go "query"     # markdown to stdout, no TUI
+qdoc --json go "query"       # JSON to stdout, with metadata
+
+# Configuration
+qdoc provider                # interactive provider picker (TUI)
+qdoc model                   # interactive model picker (TUI)
+qdoc set key <p> [key]       # set API key (prompts if key omitted, no terminal echo)
+qdoc set provider <name>     # set default provider
+qdoc set model <p> <model>   # set model for a provider
+
+# Inspection
+qdoc status                  # show current config
+qdoc providers               # list LLM providers + key/model status
+qdoc sources                 # list documentation sources
+
+# First run
+qdoc                         # interactive setup (no key configured); otherwise prints usage
 ```
-qdoc go "query"        — query go docs (only source with system prompt)
-qdoc ./dir "query"     — query local directory of docs
-qdoc sources           — list documentation sources
-qdoc providers         — list LLM providers + key/model status
-qdoc status            — show current config
-qdoc provider          — interactive provider picker (TUI)
-qdoc model             — interactive model picker (TUI)
-qdoc set key <p> [key] — set API key (prompts if key omitted, no terminal echo)
-qdoc                   — first-run: interactive setup (no key configured); otherwise prints usage
-```
+
+## Documentation sources
+
+Built-in sources defined in `internal/docsource/source.go`:
+
+| Name | URL | Index |
+|------|-----|-------|
+| `go` | go.dev/doc | Parsed from `/doc/` page |
+| `fastapi` | fastapi.tiangolo.com | Parsed from `/` page |
+
+`./path` → local directory: recursively walks `.md`, `.mdx`, `.html`, `.rst`, `.txt`, `.adoc`.
+
+## Providers
+
+Defined in `internal/provider/provider.go`:
+
+| Provider | Default Model | Env Var |
+|----------|--------------|---------|
+| `openai` | `gpt-5.5` | `OPENAI_API_KEY` |
+| `deepseek` | `deepseek-v4-flash` | `DEEPSEEK_API_KEY` |
+| `opencode-zen` | `gpt-5.4-mini` | `OPENCODE_ZEN_API_KEY` |
+| `opencode-go` | `deepseek-v4-flash` | `OPENCODE_GO_API_KEY` |
+
+All use OpenAI-compatible `/v1/chat/completions` API. Custom base URL via `QDOC_BASE_URL` env var.
 
 ## Config file
 
 `~/.config/qdoc/config.json`:
+
 ```json
 {
   "provider": "openai",
   "keys": {"openai": "sk-..."},
-  "models": {"openai": "gpt-4.1"}
+  "models": {"openai": "gpt-5.5"}
 }
 ```
+
 Emptied keys/models maps are re-initialized to non-nil on load.
+
+## Install script
+
+`docs/public/install.sh` — POSIX bootstrap re-execs with bash if needed. Installs binary to `~/.qdoc/bin`, adds to shell config. Options: `--version`, `--no-modify-path`.
+
+## npm package
+
+Package name: `qdoc-agent` (defined in `package.json`). `bin/qdoc.js` proxies to the platform binary. `install.js` downloads the binary during `postinstall`.
+
+## Release workflow
+
+`.github/workflows/release.yml` — triggered by git tag `v*`. Builds Go binaries for all platforms, attaches to GitHub Release, publishes to npm (`qdoc-agent`).
+
+## Docs site
+
+`.github/workflows/docs.yml` — deploys `docs/.vitepress/dist/` to GitHub Pages on push to main.
