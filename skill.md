@@ -3,18 +3,18 @@ name: qdoc
 description: Query documentation using an LLM. Search Go docs, FastAPI docs, or local markdown directories. USE FOR: "how do I use X in Go?", "show me the FastAPI docs for Y", "what does the docs say about Z?". DO NOT USE FOR: general coding questions not tied to specific documentation, or questions about proprietary/private codebases without docs.
 ---
 
-# qdoc Skill
+# qdoc Skill — Agent for Agents
 
-You are an AI coding agent with access to `qdoc`, a CLI that queries documentation sources using LLM-powered multi-turn research.
+`qdoc` is a CLI that does documentation research for you. Pass it a source and a query; it fetches the doc index, has an LLM select the right pages, reads them, and returns a definitive answer. One call, one answer. No trial-and-error.
 
 ## When to Use
 
 Use `qdoc` when:
 
-- The user asks a question about a framework or library that has public documentation
-- You need to read official docs to answer accurately
+- The user asks a question about a framework or library that has documentation
+- You need to read official docs to answer accurately (API signatures, configuration, patterns)
 - The user references a specific documentation source (Go, FastAPI, etc.)
-- You're asked "what does the docs say about X?"
+- You need current documentation — more reliable than training data for API details
 
 Do NOT use `qdoc` for:
 
@@ -24,96 +24,101 @@ Do NOT use `qdoc` for:
 
 ## Installation Check
 
-Before using `qdoc`, check if it's available:
+Before using `qdoc`, verify it's installed:
 
 ```bash
 which qdoc || curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
+# Or via npm: npm install -g qdoc-agent
 ```
 
-If not installed, guide the user to install it. Do not proceed without it.
+If `qdoc` is not installed and cannot be auto-installed, tell the user and stop. Do not proceed without it.
 
 ## Query Syntax
 
-### Standard Mode (TUI — great for users)
-
-```bash
-qdoc <source> <query>
-```
-
-Example:
-```bash
-qdoc go "how do generics work?"
-```
-
-This launches an interactive TUI with live streaming and scrollable output. Best for direct user interaction.
-
-### Agent Mode (--no-tui — use this)
+### Agent Mode (`--no-tui` — always use this)
 
 ```bash
 qdoc --no-tui <source> <query>
 ```
 
-Example:
+Runs headlessly. The answer is printed as markdown to stdout. Always use `--no-tui` — the TUI is for human users.
+
 ```bash
 qdoc --no-tui go "generics constraints and type inference"
+qdoc --no-tui fastapi "OAuth2 password flow with JWT"
 ```
 
-This runs headlessly and outputs the answer as markdown to stdout. Always use this mode — the TUI is for humans only.
-
-### JSON Mode (--json — for structured parsing)
+### JSON Mode (`--json` — for structured output)
 
 ```bash
 qdoc --json <source> <query>
 ```
 
+Returns JSON with `answer`, `source`, and `steps` fields.
+
 ```bash
 qdoc --json go "generics" | jq -r '.answer'
+qdoc --json go "generics" | jq '.steps[] | "\(.phase): \(.detail)"'
 ```
 
 ## Available Sources
-
-Run to list available sources:
 
 ```bash
 qdoc sources
 ```
 
-Common sources:
-
 | Source | Description |
-|---|---|
-| `go` | Go standard library and toolchain docs |
-| `fastapi` | FastAPI framework documentation |
-| `./path/to/docs` | Any local directory of markdown files |
+|--------|------------|
+| `go` | Go standard library, toolchain, modules, tutorials — [go.dev/doc](https://go.dev/doc) |
+| `fastapi` | FastAPI framework — [fastapi.tiangolo.com](https://fastapi.tiangolo.com) |
+| `./path` | Any local directory of markdown, HTML, reStructuredText, or AsciiDoc files |
+
+## Best Practices
+
+### Write specific queries
+
+| Weak | Strong |
+|------|--------|
+| `"error handling"` | `"error wrapping with fmt.Errorf, errors.Is, and errors.As in Go 1.24"` |
+| `"routing"` | `"how APIRouter works with path operation decorators in FastAPI"` |
+
+### Include function names and error messages
+
+```bash
+qdoc --no-tui go "os.ReadFile vs os.Open + bufio.Scanner for large files"
+qdoc --no-tui fastapi "422 Unprocessable Entity with Pydantic v2 field validators"
+```
+
+### Query local project docs
+
+```bash
+qdoc --no-tui ./docs/api "POST /users endpoint request body schema"
+```
 
 ## Important Behaviors
 
-1. **One-shot answers**: qdoc always returns a single, definitive answer. No conversation, no follow-ups.
-2. **Multi-turn research**: Behind the scenes, qdoc may fetch multiple pages across up to 5 turns. Be patient — `--no-tui` runs silently.
-3. **Exit code 0**: Answer was generated successfully. Exit code 1: Error (missing key, unknown source, API error).
-4. **API key required**: The user must have configured at least one provider key (`qdoc set key <provider> <key>`).
+1. **One-shot**: qdoc always returns a single answer. No conversation, no follow-ups.
+2. **Multi-turn internally**: Behind the scenes, qdoc may fetch pages across up to 5 turns. Wait for the result — `--no-tui` runs silently.
+3. **Exit codes**: 0 = success (answer generated). 1 = error (missing key, unknown source, API failure). Always check.
+4. **API key required**: The user must have configured at least one provider key. If missing, tell them to run `qdoc set key <provider>`.
 
 ## Troubleshooting
 
 If `qdoc` fails:
 
-1. Check configuration: `qdoc status`
-2. List providers: `qdoc providers`
-3. Set API key: `qdoc set key <provider> <key>`
-4. Check version: `qdoc --version`
-
-## Example Workflow
-
-When a user asks "how does error wrapping work in Go?":
-
 ```bash
-qdoc --no-tui go "error wrapping with fmt.Errorf and errors.Is"
+qdoc status          # Check configuration
+qdoc providers       # List providers and key status
+qdoc set key openai  # Set or update API key
+qdoc --version       # Check version
 ```
 
-Read the output and present it to the user. If the answer references specific URLs, include them as citations.
+## Example
 
-## Notes
+User asks: "how does error wrapping work in Go?"
 
-- qdoc reads real documentation — it's more reliable than general LLM knowledge for current API details
-- The answer may include code examples from the docs
-- For very specific questions, make your query as precise as possible (include function names, error messages, etc.)
+```bash
+qdoc --no-tui go "error wrapping with fmt.Errorf %w, errors.Is, errors.As"
+```
+
+Read the output. Present the answer to the user with any citations included.

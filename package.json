@@ -1,7 +1,7 @@
 {
-  "name": "qdoc",
-  "version": "0.0.0",
-  "description": "LLM-powered CLI that queries documentation sources and answers your questions",
+  "name": "qdoc-agent",
+  "version": "0.1.4",
+  "description": "Agent for Agents — documentation research for AI coding agents. One call, one answer. No trial-and-error. No wasted tokens.",
   "license": "MIT",
   "repository": "github:ibrhr/qdoc",
   "bin": {

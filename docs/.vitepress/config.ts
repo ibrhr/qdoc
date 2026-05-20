@@ -1,16 +1,19 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'qdoc',
-  description: 'Query the Docs — an LLM-powered CLI for documentation',
+  title: 'qdoc — Agent for Agents',
+  description: 'Documentation research for AI coding agents. One LLM call, one answer. No trial-and-error. No wasted tokens.',
   base: '/',
   cleanUrls: true,
   head: [
     ['link', { rel: 'icon', href: '/favicon.svg' }],
+    ['meta', { property: 'og:title', content: 'qdoc — Agent for Agents' }],
+    ['meta', { property: 'og:description', content: 'Documentation research for AI coding agents. One LLM call, one answer.' }],
   ],
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Agent Usage', link: '/guide/agent-usage' },
       { text: 'Reference', link: '/reference/cli' },
       { text: 'GitHub', link: 'https://github.com/ibrhr/qdoc' },
     ],
