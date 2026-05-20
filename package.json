@@ -1,6 +1,6 @@
 {
   "name": "qdoc-agent",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Agent for Agents — documentation research for AI coding agents. One call, one answer. No trial-and-error. No wasted tokens.",
   "license": "MIT",
   "repository": "github:ibrhr/qdoc",
