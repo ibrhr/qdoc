@@ -27,7 +27,7 @@ Do NOT use `qdoc` for:
 Before using `qdoc`, check if it's available:
 
 ```bash
-which qdoc || (curl -sLO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_linux_amd64.tar.gz && tar xzf qdoc_linux_amd64.tar.gz && sudo mv qdoc /usr/local/bin/)
+which qdoc || curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
 ```
 
 If not installed, guide the user to install it. Do not proceed without it.

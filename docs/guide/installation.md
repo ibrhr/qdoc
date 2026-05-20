@@ -1,54 +1,33 @@
 # Installation
 
-## Binary Download
+```bash
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
+```
 
-Download prebuilt binaries from [GitHub Releases](https://github.com/ibrhr/qdoc/releases/latest).
+The script detects your OS and architecture, downloads the right binary, and installs to `/usr/local/bin`.
 
-### Linux
+## Manual Download
+
+Binaries for all platforms are on the [GitHub Releases](https://github.com/ibrhr/qdoc/releases/latest) page.
+
+| Platform | Archive |
+|---|---|
+| Linux amd64 | `qdoc_linux_amd64.tar.gz` |
+| Linux arm64 | `qdoc_linux_arm64.tar.gz` |
+| macOS Intel | `qdoc_darwin_amd64.tar.gz` |
+| macOS Apple Silicon | `qdoc_darwin_arm64.tar.gz` |
+| Windows amd64 | `qdoc_windows_amd64.zip` |
 
 ```bash
+# Linux / macOS
 curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_linux_amd64.tar.gz
 tar xzf qdoc_linux_amd64.tar.gz
 sudo mv qdoc /usr/local/bin/
 ```
 
-For ARM64 (Raspberry Pi, AWS Graviton):
-
-```bash
-curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_linux_arm64.tar.gz
-tar xzf qdoc_linux_arm64.tar.gz
-sudo mv qdoc /usr/local/bin/
-```
-
-### macOS
-
-Intel:
-
-```bash
-curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_darwin_amd64.tar.gz
-tar xzf qdoc_darwin_amd64.tar.gz
-sudo mv qdoc /usr/local/bin/
-```
-
-Apple Silicon:
-
-```bash
-curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_darwin_arm64.tar.gz
-tar xzf qdoc_darwin_arm64.tar.gz
-sudo mv qdoc /usr/local/bin/
-```
-
-### Windows
-
-```powershell
-curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_windows_amd64.zip
-tar xzf qdoc_windows_amd64.zip
-move qdoc.exe C:\Windows\System32\
-```
-
 ## From Source
 
-If you have Go 1.26+:
+Requires Go 1.26+:
 
 ```bash
 git clone https://github.com/ibrhr/qdoc.git

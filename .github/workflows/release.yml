@@ -38,20 +38,20 @@ jobs:
 
           go build \
             -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -s -w" \
-            -o dist/qdoc_${GOOS}_${GOARCH}${EXT} \
+            -o dist/qdoc${EXT} \
             .
 
       - name: Package (unix)
         if: matrix.goos != 'windows'
         run: |
           cd dist
-          tar czf qdoc_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz qdoc_${{ matrix.goos }}_${{ matrix.goarch }}
+          tar czf qdoc_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz qdoc
 
       - name: Package (windows)
         if: matrix.goos == 'windows'
         run: |
           cd dist
-          zip qdoc_windows_${{ matrix.goarch }}.zip qdoc_windows_${{ matrix.goarch }}.exe
+          zip qdoc_windows_${{ matrix.goarch }}.zip qdoc.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

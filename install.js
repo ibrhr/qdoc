@@ -51,18 +51,14 @@ async function main() {
     if (process.platform === "win32") {
       writeFileSync(join(tmp, "qdoc.zip"), buf);
       execSync(`tar -xf qdoc.zip`, { cwd: tmp, stdio: "ignore" });
-      rmSync(join(tmp, "qdoc.zip"));
     } else {
       writeFileSync(join(tmp, "qdoc.tar.gz"), buf);
       execSync(`tar xzf qdoc.tar.gz`, { cwd: tmp, stdio: "ignore" });
-      rmSync(join(tmp, "qdoc.tar.gz"));
     }
 
-    // Find the extracted binary and move it to dest
-    const { readdirSync } = require("fs");
-    const files = readdirSync(tmp).filter((f) => f.startsWith("qdoc"));
-    if (files.length === 0) throw new Error("no binary found in archive");
-    renameSync(join(tmp, files[0]), dest);
+    const src = join(tmp, "qdoc" + ext);
+    if (!existsSync(src)) throw new Error("binary not found in archive");
+    renameSync(src, dest);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

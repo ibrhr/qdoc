@@ -22,13 +22,7 @@ $ qdoc go "how do generics work in Go"
 ## Quick start
 
 ```bash
-# Linux / macOS
-curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_linux_amd64.tar.gz
-tar xzf qdoc_linux_amd64.tar.gz && sudo mv qdoc /usr/local/bin/
-
-# Windows (PowerShell)
-curl -LO https://github.com/ibrhr/qdoc/releases/latest/download/qdoc_windows_amd64.zip
-tar xzf qdoc_windows_amd64.zip && move qdoc.exe C:\Windows\System32\
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
 ```
 
 See [all platforms & architectures](https://github.com/ibrhr/qdoc/releases/latest).
