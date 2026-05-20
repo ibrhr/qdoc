@@ -22,7 +22,7 @@ $ qdoc go "how do generics work in Go"
 ## Quick start
 
 ```bash
-curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 ```
 
 See [all platforms & architectures](https://github.com/ibrhr/qdoc/releases/latest).

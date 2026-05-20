@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# Re-exec with bash if invoked via sh (e.g. curl | sh on systems where /bin/sh is dash)
+if [ -z "${BASH_VERSION:-}" ]; then
+    if command -v bash >/dev/null 2>&1; then
+        exec bash -c "$(curl -fsSL https://qdoc.ibrhr.dev/install.sh)" bash "$@"
+    else
+        echo "Error: bash is required for this installer." >&2
+        echo "Install bash or download the binary manually:" >&2
+        echo "  https://github.com/ibrhr/qdoc/releases" >&2
+        exit 1
+    fi
+fi
 set -euo pipefail
 
 APP=qdoc
@@ -16,7 +27,7 @@ usage() {
     cat <<EOF
 ${BOLD}qdoc installer${NC}
 
-${MUTED}Usage:${NC} curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
+${MUTED}Usage:${NC} curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 
 ${MUTED}Options:${NC}
     -h, --help               Show this message
@@ -46,10 +57,9 @@ done
 # ── platform detection ──────────────────────────────────────────────
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
-case "$(uname -s)" in
-    Linux)  os="linux"   ;;
-    Darwin) os="darwin"  ;;
-    *)      echo -e "${RED}Unsupported OS: $(uname -s)${NC}" >&2; exit 1 ;;
+case "$os" in
+    linux|darwin) ;;
+    *) echo -e "${RED}Unsupported OS: $(uname -s)${NC}" >&2; exit 1 ;;
 esac
 
 arch=$(uname -m)
@@ -66,6 +76,11 @@ ext=".tar.gz"
 
 if [ -z "$requested_version" ]; then
     tag=$(curl -sf https://api.github.com/repos/$REPO/releases/latest | grep -o '"tag_name": *"v[^"]*"' | grep -o 'v[^"]*')
+    if [ -z "$tag" ]; then
+        echo -e "${RED}Failed to resolve latest version (GitHub API may be rate-limited or unreachable).${NC}" >&2
+        echo -e "${RED}Specify a version manually: curl ... | bash -s -- --version 0.1.0${NC}" >&2
+        exit 1
+    fi
     specific_version="${tag#v}"
 else
     tag="v$requested_version"
@@ -152,9 +167,9 @@ maybe_add_path() {
             add_to_path "$f" "export PATH=\"$INSTALL_DIR:\$PATH\""
             ;;
         bash)
-            local f="$HOME/.bashrc"
+            local f="$HOME/.bash_profile"
+            [ ! -f "$f" ] && f="$HOME/.bashrc"
             [ ! -f "$f" ] && f="$HOME/.profile"
-            [ ! -f "$f" ] && f="$HOME/.bash_profile"
             add_to_path "$f" "export PATH=\"$INSTALL_DIR:\$PATH\""
             ;;
         *)

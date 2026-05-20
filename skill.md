@@ -27,7 +27,7 @@ Do NOT use `qdoc` for:
 Before using `qdoc`, check if it's available:
 
 ```bash
-which qdoc || curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
+which qdoc || curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 ```
 
 If not installed, guide the user to install it. Do not proceed without it.

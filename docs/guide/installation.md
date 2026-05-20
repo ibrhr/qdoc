@@ -1,14 +1,14 @@
 # Installation
 
 ```bash
-curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 ```
 
 The script installs to `~/.qdoc/bin` (no sudo) and adds it to your shell config. Options:
 
 ```bash
-curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh -s -- --version 0.1.2  # specific version
-curl -fsSL https://qdoc.ibrhr.dev/install.sh | sh -s -- --no-modify-path  # don't touch shell config
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash -s -- --version 0.1.2  # specific version
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash -s -- --no-modify-path  # don't touch shell config
 ```
 
 ## Manual Download
