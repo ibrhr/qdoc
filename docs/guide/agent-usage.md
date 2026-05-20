@@ -36,14 +36,6 @@ Output format:
 }
 ```
 
-## CI/CD Pipeline Integration
-
-```bash
-# In any CI script — just set the env var and run
-export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-qdoc --json go "release notes for Go 1.22" | jq '.answer'
-```
-
 ## Installing the Agent Skill
 
 To add qdoc as a skill for your coding agent:
