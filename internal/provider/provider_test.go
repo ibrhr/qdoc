@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ibrhr/qdoc/internal/config"
+	"github.com/ibrhr/qdoc/internal/llm"
 )
 
 func TestFind_Exact(t *testing.T) {
@@ -91,8 +92,9 @@ func TestResolveClient_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveClient() error: %v", err)
 	}
-	if client.APIKey != "sk-test" {
-		t.Errorf("APIKey = %q, want %q", client.APIKey, "sk-test")
+	oc := client.(*llm.OpenAIClient)
+	if oc.APIKey != "sk-test" {
+		t.Errorf("APIKey = %q, want %q", oc.APIKey, "sk-test")
 	}
 	if client.ModelName() != "gpt-5.5" {
 		t.Errorf("Model = %q, want %q", client.ModelName(), "gpt-5.5")
@@ -176,8 +178,9 @@ func TestResolveClient_EnvOverrideBaseURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveClient() error: %v", err)
 	}
-	if client.BaseURL != "https://custom.api.com/v1" {
-		t.Errorf("BaseURL = %q, want %q", client.BaseURL, "https://custom.api.com/v1")
+	oc := client.(*llm.OpenAIClient)
+	if oc.BaseURL != "https://custom.api.com/v1" {
+		t.Errorf("BaseURL = %q, want %q", oc.BaseURL, "https://custom.api.com/v1")
 	}
 }
 
@@ -206,8 +209,9 @@ func TestResolveClient_KeyFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveClient() error: %v", err)
 	}
-	if client.APIKey != "sk-from-env" {
-		t.Errorf("APIKey = %q, want %q", client.APIKey, "sk-from-env")
+	oc := client.(*llm.OpenAIClient)
+	if oc.APIKey != "sk-from-env" {
+		t.Errorf("APIKey = %q, want %q", oc.APIKey, "sk-from-env")
 	}
 }
 
@@ -247,3 +251,45 @@ func TestErrNoProvider_Error(t *testing.T) {
 		t.Error("error message should not be empty")
 	}
 }
+
+func TestProvidersLoadedFromJSON(t *testing.T) {
+	if len(Providers) < 9 {
+		t.Fatalf("expected at least 9 providers from embedded JSON, got %d", len(Providers))
+	}
+
+	tests := []struct {
+		name     string
+		apiType  string
+		wantKey  string
+	}{
+		{"openai", "openai-compat", "OPENAI_API_KEY"},
+		{"deepseek", "openai-compat", "DEEPSEEK_API_KEY"},
+		{"xai", "openai-compat", "XAI_API_KEY"},
+		{"alibaba", "openai-compat", "DASHSCOPE_API_KEY"},
+		{"google", "openai-compat", "GEMINI_API_KEY"},
+		{"zhipu", "openai-compat", "ZAI_API_KEY"},
+		{"moonshot", "openai-compat", "MOONSHOT_API_KEY"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prov, found := Find(tt.name)
+			if !found {
+				t.Fatalf("%s not found in embedded providers", tt.name)
+			}
+			if prov.APIType != tt.apiType {
+				t.Errorf("APIType = %q, want %q", prov.APIType, tt.apiType)
+			}
+			if prov.EnvKey != tt.wantKey {
+				t.Errorf("EnvKey = %q, want %q", prov.EnvKey, tt.wantKey)
+			}
+			if prov.DefaultModel == "" {
+				t.Errorf("DefaultModel should not be empty for %s", tt.name)
+			}
+			if len(prov.Models) == 0 {
+				t.Errorf("Models should not be empty for %s", tt.name)
+			}
+		})
+	}
+}
+

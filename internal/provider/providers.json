@@ -1,0 +1,128 @@
+[
+  {
+    "name": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "api_type": "openai-compat",
+    "env_key": "OPENAI_API_KEY",
+    "default_model": "gpt-5.5",
+    "description": "OpenAI — gpt-5.5, gpt-5.4-mini, etc.",
+    "models": ["gpt-5.5", "gpt-5.5-pro", "gpt-5.4", "gpt-5.4-pro", "gpt-5.4-mini", "gpt-5.4-nano"]
+  },
+  {
+    "name": "deepseek",
+    "base_url": "https://api.deepseek.com/v1",
+    "api_type": "openai-compat",
+    "env_key": "DEEPSEEK_API_KEY",
+    "default_model": "deepseek-v4-flash",
+    "description": "DeepSeek — deepseek-v4-flash, deepseek-v4-pro",
+    "models": ["deepseek-v4-flash", "deepseek-v4-pro"]
+  },
+  {
+    "name": "opencode-zen",
+    "base_url": "https://opencode.ai/zen/v1",
+    "api_type": "openai-compat",
+    "env_key": "OPENCODE_ZEN_API_KEY",
+    "default_model": "gpt-5.4-mini",
+    "description": "OpenCode Zen — curated models tested for coding",
+    "models": [
+      "gpt-5.5", "gpt-5.5-pro",
+      "gpt-5.4", "gpt-5.4-pro", "gpt-5.4-mini", "gpt-5.4-nano",
+      "claude-opus-4-7", "claude-opus-4-6", "claude-opus-4-5", "claude-opus-4-1",
+      "claude-sonnet-4-6", "claude-sonnet-4-5",
+      "claude-haiku-4-5",
+      "gemini-3.1-pro", "gemini-3-flash",
+      "qwen3.6-plus", "qwen3.5-plus",
+      "minimax-m2.7", "minimax-m2.5", "minimax-m2.5-free",
+      "glm-5.1",
+      "kimi-k2.6", "kimi-k2.5",
+      "deepseek-v4-flash-free",
+      "nemotron-3-super-free",
+      "big-pickle"
+    ]
+  },
+  {
+    "name": "opencode-go",
+    "base_url": "https://opencode.ai/zen/go/v1",
+    "api_type": "openai-compat",
+    "env_key": "OPENCODE_GO_API_KEY",
+    "default_model": "deepseek-v4-flash",
+    "description": "OpenCode Go — low cost subscription for open coding models",
+    "models": [
+      "qwen3.6-plus", "qwen3.5-plus",
+      "minimax-m2.7", "minimax-m2.5",
+      "glm-5.1",
+      "kimi-k2.6", "kimi-k2.5",
+      "deepseek-v4-flash", "deepseek-v4-pro",
+      "mimo-v2.5", "mimo-v2.5-pro"
+    ]
+  },
+  {
+    "name": "xai",
+    "base_url": "https://api.x.ai/v1",
+    "api_type": "openai-compat",
+    "env_key": "XAI_API_KEY",
+    "default_model": "grok-4.3",
+    "description": "xAI Grok — grok-4.3, grok-4.20 reasoning",
+    "models": [
+      "grok-4.3",
+      "grok-4.20-0309-reasoning",
+      "grok-4.20-0309-non-reasoning"
+    ]
+  },
+  {
+    "name": "alibaba",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "api_type": "openai-compat",
+    "env_key": "DASHSCOPE_API_KEY",
+    "default_model": "qwen3.6-plus",
+    "description": "Alibaba DashScope — Qwen models",
+    "models": [
+      "qwen3.7-max",
+      "qwen3.6-plus",
+      "qwen3.6-flash",
+      "qwen3.5-omni-plus"
+    ]
+  },
+  {
+    "name": "google",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "api_type": "openai-compat",
+    "env_key": "GEMINI_API_KEY",
+    "default_model": "gemini-3.1-pro",
+    "description": "Google Gemini — gemini-3.1-pro, gemini-3-flash",
+    "models": [
+      "gemini-3.1-pro",
+      "gemini-3-flash",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash"
+    ]
+  },
+  {
+    "name": "zhipu",
+    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "api_type": "openai-compat",
+    "env_key": "ZAI_API_KEY",
+    "default_model": "glm-5.1",
+    "description": "Zhipu AI (z.ai) — GLM series models",
+    "models": [
+      "glm-5.1",
+      "glm-5",
+      "glm-5-turbo",
+      "glm-4.7",
+      "glm-4.7-flashx",
+      "glm-4.6"
+    ]
+  },
+  {
+    "name": "moonshot",
+    "base_url": "https://api.moonshot.cn/v1",
+    "api_type": "openai-compat",
+    "env_key": "MOONSHOT_API_KEY",
+    "default_model": "kimi-k2.6",
+    "description": "Moonshot AI — Kimi K2 series models",
+    "models": [
+      "kimi-k2.6",
+      "kimi-k2.5"
+    ]
+  }
+]

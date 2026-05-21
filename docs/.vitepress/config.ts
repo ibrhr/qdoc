@@ -15,8 +15,9 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Why qdoc', link: '/guide/why' },
       { text: 'Agent Usage', link: '/guide/agent-usage' },
-      { text: 'Reference', link: '/reference/cli' },
+      { text: 'Reference', link: '/reference/providers' },
       { text: 'GitHub', link: 'https://github.com/ibrhr/qdoc' },
     ],
     sidebar: {
@@ -25,9 +26,13 @@ export default defineConfig({
           text: 'Guide',
           items: [
             { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Why qdoc', link: '/guide/why' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'Agent Usage', link: '/guide/agent-usage' },
+            { text: 'FAQ', link: '/guide/faq' },
+            { text: 'Changelog', link: '/guide/changelog' },
+            { text: 'Contributing', link: '/guide/contributing' },
           ],
         },
       ],
@@ -35,7 +40,6 @@ export default defineConfig({
         {
           text: 'Reference',
           items: [
-            { text: 'CLI Commands', link: '/reference/cli' },
             { text: 'Providers & Models', link: '/reference/providers' },
             { text: 'Doc Sources', link: '/reference/sources' },
           ],

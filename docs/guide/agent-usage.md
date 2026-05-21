@@ -2,41 +2,7 @@
 
 qdoc was built to be invoked by AI coding agents. It replaces the multi-turn, trial-and-error doc research loop with a single CLI call.
 
-## The Problem
-
-When an AI coding agent needs to answer a question about a framework or library, it typically does this:
-
-1. Skims the documentation index page (hundreds of links)
-2. Guesses which pages look relevant
-3. Fetches a handful, reads them
-4. Realizes it needs different pages, fetches more
-5. Sometimes iterates a third time
-6. Finally synthesizes an answer
-
-**This is expensive.** Every page fetch consumes context tokens. Every wrong guess wastes inference. A single doc question can burn 10-15k tokens before the agent even starts coding.
-
-## The qdoc Solution
-
-qdoc delegates the research to an LLM in one shot:
-
-```
-qdoc --no-tui go "error wrapping patterns"
-```
-
-What happens internally:
-
-| Turn | Action | Cost |
-|------|--------|------|
-| 1 | Fetch doc index (245 pages from go.dev/doc) | 1 HTTP call, ~8k chars |
-| 2 | LLM scans index + query, picks: `effective_go`, `blog/go1.13-errors` | 1 inference, ~400 output tokens |
-| 3 | qdoc fetches 2 pages in parallel, extracts main content | 2 HTTP calls |
-| 4 | LLM reads content, decides: need `errors` package docs too | 1 inference, ~200 output tokens |
-| 5 | qdoc fetches 1 more page | 1 HTTP call |
-| 6 | LLM synthesizes final answer with citations | 1 inference, ~800 output tokens |
-
-**Result:** 3 LLM inferences, 4 page fetches, one definitive answer. No wasted context.
-
-Compare to the agent doing it manually: 6-8 LLM rounds, 10+ page fetches, massive context bloat.
+See [Why qdoc](/guide/why) for the full problem/solution breakdown and token cost comparison.
 
 ---
 
@@ -66,29 +32,7 @@ qdoc --no-tui fastapi "dependency injection" | less
 qdoc --json <source> <query>
 ```
 
-Identical behavior to `--no-tui`, but outputs JSON with metadata:
-
-```json
-{
-  "answer": "# Generics in Go\n\nType parameters enable...",
-  "source": "go",
-  "steps": [
-    { "phase": "Fetched index", "detail": "245 pages" },
-    { "phase": "Reading", "detail": "/doc/tutorial/generics" },
-    { "phase": "Reading", "detail": "/doc/effective_go" },
-    { "phase": "Calling", "detail": "gpt-5.5 via openai" },
-    { "phase": "Answering", "detail": "" }
-  ]
-}
-```
-
-Fields:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `answer` | `string` | The synthesized answer in markdown |
-| `source` | `string` | Doc source queried (`go`, `python`, `fastapi`, `react`, `nextjs`, `pydantic`, `./path`) |
-| `steps` | `[]Step` | Research trace: each phase and what was done |
+Identical behavior to `--no-tui`, but outputs JSON with `answer`, `source`, and `steps` fields.
 
 Parse with `jq`:
 
@@ -163,38 +107,6 @@ Add this to any agent's system prompt or custom instructions:
 
 ---
 
-## How It Works (Internals)
-
-```
-Query → Fetch Index → [LLM: Pick Pages] → Parallel Fetch → Extract Content
-                                                    ↓
-                                              [LLM: Read + Decide]
-                                                    ↓
-                                         Need more? →← Done?
-                                              ↓         ↓
-                                         Next turn    Synthesize Answer
-                                        (up to 5)         ↓
-                                                      Output
-```
-
-### Retry Logic
-
-Both the LLM calls and doc fetches have built-in retry:
-
-| Component | Attempts | Base Delay | Max Delay | Strategy |
-|-----------|----------|------------|-----------|----------|
-| LLM inference | 3 | 2s | 30s | Exponential + 30% jitter |
-| Doc fetches | 3 | 1s | 10s | Exponential + 30% jitter |
-
-Retryable errors: HTTP 429, 5xx, network timeouts, stream read failures.
-Non-retryable: HTTP 400, 401, 403, 404.
-
-### Content Extraction
-
-qdoc extracts the main content from HTML documentation pages, stripping navigation, headers, footers, and sidebars. Each page is truncated to 12,000 characters to keep context manageable while retaining substantive content.
-
----
-
 ## Best Practices for Agent Queries
 
 ### Be specific
@@ -242,12 +154,14 @@ Agents should check `$?` after each call. Non-zero exit code = retry or escalate
 
 ---
 
-## Environment Variables
+## Recommended Models for Agents
 
-```bash
-export QDOC_PROVIDER=openai
-export QDOC_MODEL=gpt-5.4-mini
-export OPENAI_API_KEY=$OPENAI_API_KEY
-```
+For agent use, prioritize speed and cost over maximum capability. Doc research doesn't require frontier models:
 
-`gpt-5.4-mini` is a good default for agent use — fast, cheap, and sufficient for doc research.
+| Use Case | Recommended Model |
+|----------|------------------|
+| Fast, cheap research | `gpt-5.4-mini` (OpenAI) or `deepseek-v4-flash` |
+| Complex API questions | `gpt-5.5` (OpenAI) or `gpt-5.4` (OpenCode Zen) |
+| Deep code analysis | `deepseek-v4-pro` or `claude-opus-4-7` (OpenCode Zen) |
+
+See [Configuration](/guide/configuration) for model setup.

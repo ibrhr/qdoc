@@ -22,15 +22,34 @@ type ChatMessage struct {
 	Content string `json:"content"`
 }
 
-type Client struct {
+type OpenAIClient struct {
 	APIKey   string
 	BaseURL  string
 	Model    string
 	Provider string
+	Headers  map[string]string
 }
 
-func (c *Client) ModelName() string  { return c.Model }
-func (c *Client) ProviderName() string { return c.Provider }
+func (c *OpenAIClient) ModelName() string    { return c.Model }
+func (c *OpenAIClient) ProviderName() string { return c.Provider }
+
+func NewClient(apiType string, cfg Config) (Client, error) {
+	if apiType == "" {
+		apiType = "openai-compat"
+	}
+	switch apiType {
+	case "openai-compat":
+		return &OpenAIClient{
+			APIKey:   cfg.APIKey,
+			BaseURL:  cfg.BaseURL,
+			Model:    cfg.Model,
+			Provider: cfg.Provider,
+			Headers:  cfg.Headers,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported api type: %s", apiType)
+	}
+}
 
 type streamRequest struct {
 	Model    string        `json:"model"`
@@ -52,7 +71,13 @@ const (
 	streamReadTimeout = 60 * time.Second
 )
 
-func (c *Client) Send(messages []ChatMessage) (string, error) {
+func (c *OpenAIClient) setHeaders(req *http.Request) {
+	for k, v := range c.Headers {
+		req.Header.Set(k, v)
+	}
+}
+
+func (c *OpenAIClient) Send(messages []ChatMessage) (string, error) {
 	body := streamRequest{
 		Model:    c.Model,
 		Messages: messages,
@@ -79,6 +104,7 @@ func (c *Client) Send(messages []ChatMessage) (string, error) {
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+		c.setHeaders(req)
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
@@ -124,7 +150,7 @@ func (c *Client) Send(messages []ChatMessage) (string, error) {
 	return "", fmt.Errorf("retry exhausted (%d attempts): %w", retry.LLMRetry.MaxAttempts, lastErr)
 }
 
-func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
+func (c *OpenAIClient) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 	defer close(ch)
 
 	body := streamRequest{
@@ -163,6 +189,7 @@ func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+		c.setHeaders(req)
 
 		resp, err := httpClient.Do(req)
 		if err != nil {

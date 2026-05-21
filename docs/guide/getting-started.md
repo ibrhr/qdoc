@@ -5,6 +5,8 @@ qdoc queries documentation sources using LLM-powered multi-turn research. Pick y
 - **You're an agent** → invoke qdoc headlessly, get a markdown answer, no TUI
 - **You're a human** → launch the interactive TUI, watch the research live, scroll the result
 
+Not sure why you need qdoc? See [Why qdoc](/guide/why).
+
 ---
 
 ## Quick Start
@@ -76,28 +78,6 @@ Interactive features:
 
 ---
 
-## How It Works
-
-```
-Query → Fetch Doc Index → [LLM: Pick Pages] → Parallel Fetch + Extract
-                                                    ↓
-                                              [LLM: Read + Decide]
-                                                    ↓
-                                         Need more? →← Done?
-                                              ↓         ↓
-                                         Next turn    Synthesize Answer
-                                        (up to 5)         ↓
-                                                      Output
-```
-
-1. **Fetch Index** — Download the full list of documentation pages (~245 for Go docs)
-2. **LLM Selects Pages** — The LLM scans the index and picks exactly which pages are relevant to your query
-3. **Parallel Reads** — qdoc fetches those pages simultaneously, extracts main content
-4. **Iterate** — If the LLM needs more context, qdoc fetches additional pages (up to 5 turns)
-5. **Answer** — The LLM synthesizes a definitive answer with citations from the actual docs
-
----
-
 ## First-Run Setup
 
 No API key configured? qdoc launches an interactive setup wizard:
@@ -133,7 +113,8 @@ qdoc status
 
 ## Next Steps
 
+- [Why qdoc](/guide/why) — the problem qdoc solves, and how it works
 - [Agent Usage](/guide/agent-usage) — integrate qdoc with your coding agent
 - [Installation](/guide/installation) — all installation methods, manual download, build from source
 - [Configuration](/guide/configuration) — providers, keys, models, env vars
-- [CLI Reference](/reference/cli) — all commands and flags
+- [FAQ](/guide/faq) — common questions and answers

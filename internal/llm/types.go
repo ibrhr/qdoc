@@ -13,3 +13,16 @@ type Streamer interface {
 	ModelName() string
 	ProviderName() string
 }
+
+type Client interface {
+	Streamer
+	Send(messages []ChatMessage) (string, error)
+}
+
+type Config struct {
+	APIKey   string
+	BaseURL  string
+	Model    string
+	Provider string
+	Headers  map[string]string
+}
