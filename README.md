@@ -18,6 +18,9 @@ curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 
 # Any platform (npm)
 npm install -g qdoc-agent
+
+# Or pin a specific version
+npm install -g qdoc-agent@0.1.5
 ```
 
 ```bash
@@ -180,7 +183,7 @@ curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 Installs to `~/.qdoc/bin` (no sudo). Adds itself to your shell config. Options:
 
 ```bash
-curl -fsSL ... | bash -s -- --version 0.1.2     # specific version
+curl -fsSL ... | bash -s -- --version X.Y.Z    # specific version
 curl -fsSL ... | bash -s -- --no-modify-path    # don't touch shell config
 ```
 
@@ -189,6 +192,8 @@ curl -fsSL ... | bash -s -- --no-modify-path    # don't touch shell config
 ```bash
 npm install -g qdoc-agent
 ```
+
+Pin a specific version with `qdoc-agent@0.1.5`.
 
 ### Manual download
 
@@ -223,7 +228,7 @@ Tests use the standard library `testing` package (no third-party deps). HTTP-dep
 
 ```bash
 qdoc --version
-# qdoc 0.1.2 (abc1234)
+# qdoc 0.1.5 (abc1234)
 ```
 
 ---

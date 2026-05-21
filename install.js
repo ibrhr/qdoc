@@ -4,6 +4,7 @@ const { join } = require("path");
 const https = require("https");
 
 const REPO = "ibrhr/qdoc";
+const VERSION = require("./package.json").version;
 
 function mapPlatform() {
   const goos = { linux: "linux", darwin: "darwin", win32: "windows" }[process.platform];
@@ -35,10 +36,17 @@ async function main() {
   const ext = process.platform === "win32" ? ".exe" : "";
   const dest = join(pkgDir, "qdoc_bin" + ext);
 
-  if (existsSync(dest)) return;
+  if (existsSync(dest)) {
+    try {
+      const out = execSync(`"${dest}" --version`, { encoding: "utf-8" });
+      const match = out.match(/\d+\.\d+\.\d+/);
+      if (match && match[0] === VERSION) return;
+    } catch (_) {}
+  }
 
   const platform = mapPlatform();
-  const base = `https://github.com/${REPO}/releases/latest/download/qdoc_${platform}`;
+  const tag = `v${VERSION}`;
+  const base = `https://github.com/${REPO}/releases/download/${tag}/qdoc_${platform}`;
   const url = process.platform === "win32" ? `${base}.zip` : `${base}.tar.gz`;
 
   process.stderr.write(`qdoc: downloading ${url}\n`);
@@ -69,6 +77,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("qdoc install failed:", err.message);
+  console.error(`qdoc install failed (v${VERSION}):`, err.message);
   process.exit(1);
 });

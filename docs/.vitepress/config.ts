@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitepress'
 
+const version = typeof process !== 'undefined' ? (process.env.QDOC_VERSION || 'dev') : 'dev';
+
 export default defineConfig({
   title: 'qdoc — Agent for Agents',
   description: 'Documentation research for AI coding agents. One LLM call, one answer. No trial-and-error. No wasted tokens.',
@@ -44,7 +46,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/ibrhr/qdoc' },
     ],
     footer: {
-      message: 'Released under the MIT License.',
+      message: `Released under the MIT License. qdoc v${version}`,
     },
   },
 })

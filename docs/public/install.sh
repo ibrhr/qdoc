@@ -75,10 +75,10 @@ ext=".tar.gz"
 # ── version resolution ───────────────────────────────────────────────
 
 if [ -z "$requested_version" ]; then
-    tag=$(curl -sf https://api.github.com/repos/$REPO/releases/latest | grep -o '"tag_name": *"v[^"]*"' | grep -o 'v[^"]*')
+    tag=$(curl -s -o /dev/null -w '%{url_effective}' -L "https://github.com/$REPO/releases/latest" | grep -oE 'v[^/]*$' || echo "")
     if [ -z "$tag" ]; then
-        echo -e "${RED}Failed to resolve latest version (GitHub API may be rate-limited or unreachable).${NC}" >&2
-        echo -e "${RED}Specify a version manually: curl ... | bash -s -- --version 0.1.0${NC}" >&2
+        echo -e "${RED}Failed to resolve latest version.${NC}" >&2
+        echo -e "${RED}Specify a version manually: curl ... | bash -s -- --version X.Y.Z${NC}" >&2
         exit 1
     fi
     specific_version="${tag#v}"
@@ -132,6 +132,13 @@ else
 fi
 
 chmod +x "$INSTALL_DIR/$APP"
+
+installed_ver=$("$INSTALL_DIR/$APP" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+if [ "$installed_ver" != "$specific_version" ]; then
+    echo -e "${RED}Version mismatch: expected $specific_version, got ${installed_ver:-none}${NC}" >&2
+    rm -f "$INSTALL_DIR/$APP"
+    exit 1
+fi
 
 # ── PATH setup ───────────────────────────────────────────────────────
 

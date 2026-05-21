@@ -16,8 +16,11 @@ jobs:
       - run: npm ci
         working-directory: docs
 
-      - run: npm run build
+      - name: Build docs
         working-directory: docs
+        run: |
+          export QDOC_VERSION=$(git describe --tags --always --dirty | sed 's/^v//')
+          npm run build
 
       - run: mv docs/.vitepress/dist .
 

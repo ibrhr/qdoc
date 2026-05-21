@@ -12,7 +12,7 @@ Options:
 
 ```bash
 # Pin a specific version
-curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash -s -- --version 0.1.2
+curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash -s -- --version X.Y.Z
 
 # Don't modify shell config (add to PATH yourself)
 curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash -s -- --no-modify-path
@@ -26,7 +26,13 @@ The script detects your OS and architecture and downloads the correct binary fro
 npm install -g qdoc-agent
 ```
 
-The `postinstall` script downloads the correct platform binary to `node_modules/qdoc-agent/qdoc_bin`. A shim script at `bin/qdoc.js` proxies CLI invocations to the binary. Requires Node.js 18+.
+The `postinstall` script downloads the matching binary for your platform from the corresponding GitHub Release. A shim script at `bin/qdoc.js` proxies CLI invocations to the binary. Requires Node.js 18+.
+
+To pin a specific version:
+
+```bash
+npm install -g qdoc-agent@0.1.5
+```
 
 ## Manual Download
 
@@ -63,7 +69,7 @@ mkdir -p ~/.local/bin && mv qdoc ~/.local/bin/
 
 ```bash
 qdoc --version
-# qdoc 0.1.2 (abc1234)
+# qdoc 0.1.5 (abc1234)
 ```
 
 If `qdoc` is not found, you may need to restart your shell or source your config:
