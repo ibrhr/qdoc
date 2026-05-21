@@ -111,7 +111,11 @@ Set a provider interactively (`qdoc provider`), via config, or with env vars: `O
 | Source | Description |
 |--------|------------|
 | `go` | Go standard library, toolchain, modules, tutorials — [go.dev/doc](https://go.dev/doc) |
+| `python` | Python 3 standard library, tutorial, reference — [docs.python.org/3](https://docs.python.org/3) |
+| `nextjs` | Next.js App Router + Pages Router — [nextjs.org/docs](https://nextjs.org/docs) |
 | `fastapi` | FastAPI framework — [fastapi.tiangolo.com](https://fastapi.tiangolo.com) |
+| `react` | React docs (learn, reference, hooks) — [react.dev](https://react.dev) |
+| `pydantic` | Pydantic validation library — [pydantic.dev](https://pydantic.dev) |
 | `./path` | Any local directory of markdown, HTML, RST, or AsciiDoc files |
 
 ```bash
@@ -200,6 +204,18 @@ mv qdoc ~/.local/bin/
 ```
 
 Requires Go 1.26+.
+
+### Development
+
+```bash
+go build ./...       # build all packages
+go vet ./...         # static analysis
+go test ./...        # run 191 tests across 9 packages
+go test -race ./...  # with race detector
+go test -cover ./... # with coverage
+```
+
+Tests use the standard library `testing` package (no third-party deps). HTTP-dependent tests use `httptest.NewServer`.
 
 ---
 

@@ -8,7 +8,25 @@
 export PATH=$PATH:/usr/local/go/bin  # Go 1.26.3 lives here
 go build ./...   # builds all packages
 go vet ./...
+go test ./...    # runs all tests (~190)
 ```
+
+### Tests
+
+191 tests across 9 packages. Table-driven, standard library `testing` only (no third-party test deps).
+
+| Package | Coverage | Focus |
+|---------|----------|-------|
+| `retry` | 100% | BackoffDelay, IsRetryableHTTP, IsRetryableError |
+| `provider` | 100% | Find, ResolveClient, KeyExists, env overrides |
+| `sessionlog` | 93% | New, Log, sanitize, section, raw, close |
+| `llm` | 86% | ParseResponses, BuildSystemPrompt, Client.Send/Stream (mock servers) |
+| `config` | 74% | Load, Save, Default, nil-map normalization |
+| `docsource` | 72% | extractLinks, extractMainContent, stripHTML, blockedPath, FetchIndex/FetchContent (mock servers + temp dirs) |
+| `tui` | 17% | renderMarkdown, renderInlineMarkdown, handleStreamDelta, handleDocContent, remainingFetching, key handling |
+| `runner` | 14% | Run(unknown source), Step/Result types, contains helper |
+
+Run with race detector: `go test -race ./...` (llm package takes ~23s due to HTTP retry timing).
 
 ## Docs site
 
@@ -32,11 +50,13 @@ internal/
     config.go                    # Config struct, load, save, configPath
   provider/
     provider.go                  # Provider struct, registry, Find, ResolveClient, error types
+  retry/
+    retry.go                     # Shared retry Config, BackoffDelay, IsRetryableHTTP/Error
   llm/
-    client.go                    # Client struct, Send(), Stream() methods, retry logic
+    client.go                    # Client struct, Send(), Stream() methods
     prompt.go                    # BuildSystemPrompt()
     parse.go                     # ParsedAction, ParseResponses()
-    types.go                     # ChatMessage, StreamDelta
+    types.go                     # ChatMessage, StreamDelta, Streamer interface
   docsource/
     source.go                    # Source, Entry, KnownSources, Find, fetch methods, retryableHTTPGet
     html.go                      # extractLinks, extractMainContent (unexported HTML helpers)
@@ -66,6 +86,8 @@ llm ←── docsource (for BuildSystemPrompt)
        ↑
        │
      main (imports everything)
+
+retry (standalone) ── imported by llm, docsource
 ```
 
 ### Exported types mapping
@@ -82,6 +104,8 @@ llm ←── docsource (for BuildSystemPrompt)
 | `parsedAction` struct | `llm` | `llm.ParsedAction` |
 | `streamDeltaMsg` struct | `llm` | `llm.StreamDelta` |
 | `model` struct | `tui` | `tui.Model` |
+| — | `retry` | `retry.Config`, `retry.RetryableError` |
+| — | `llm` | `llm.Streamer` (interface) |
 
 ### Key constructor functions
 
@@ -116,7 +140,7 @@ llm ←── docsource (for BuildSystemPrompt)
 
 6. **Error display in setup**: Errors render in a red `errorBox` above the setup content. They auto-clear on any user interaction (cursor move, input). If `saveConfig` fails during setup, the error is set and the user can retry.
 
-7. **StreamDelta is now llm.StreamDelta**: Previously `streamDeltaMsg` was defined in `messages.go` as `struct{content string; done bool; err error; retrying bool}`. Now it's `llm.StreamDelta` with exported fields: `Content`, `Done`, `Err`, `Retrying`.
+7. **StreamDelta is now llm.StreamDelta**: Previously `streamDeltaMsg` was defined in `messages.go` as `struct{content string; done bool; err error; retrying bool}`. Now it's `llm.StreamDelta` with exported fields: `Content`, `Done`, `Err`, `Retrying`. The LLM client field on the model is `llm.Streamer` (interface), not `*llm.Client` — use `ModelName()` / `ProviderName()` methods, not `.Model` / `.Provider` fields.
 
 8. **renderMarkdown blank line bug**: The loop already emits `\n` between every line (`if i > 0 { sb.WriteString("\n") }`). Do NOT add another `\n` for blank lines — it doubles them. Just `continue`.
 
@@ -130,6 +154,10 @@ llm ←── docsource (for BuildSystemPrompt)
     - Don't give contradictory number ranges (`2-3` vs `up to 3` vs `a JSON action` singular)
     - Don't use prescriptive arrow rules (`"How do I X?" → /doc/foo`) — turns models into rule-matchers instead of readers
     - Keep it simple: here are the sections, here are the files, here's the query
+
+12. **`filesPending` counter in remainingFetching**: The TUI tracks pending file fetches via a per-batch `filesPending` counter (set in `startFileFetches`, decremented in `handleDocContent`). Do NOT use `len(m.pendingReads) - len(m.readFiles)` — `readFiles` is cumulative across iterations, so the subtraction gives incorrect results on iteration 2+.
+
+13. **Retry logic lives in `internal/retry`**: Both `llm` and `docsource` import the shared `retry` package. Use `retry.LLMRetry` for LLM API calls (3 attempts, 2s base, 30s max) and `retry.FetchRetry` for doc fetches (3 attempts, 1s base, 10s max). Use `retry.IsRetryableError(err)` to check if an error warrants a retry.
 
 ## Streaming pipeline
 
@@ -192,6 +220,7 @@ Built-in sources defined in `internal/docsource/source.go`:
 | `nextjs` | nextjs.org/docs | Parsed from `/docs` sidebar |
 | `fastapi` | fastapi.tiangolo.com | Parsed from `/` page |
 | `react` | react.dev | Parsed from `/learn` sidebar |
+| `pydantic` | pydantic.dev | Parsed from `/docs/validation/latest/` page |
 
 `./path` → local directory: recursively walks `.md`, `.mdx`, `.html`, `.rst`, `.txt`, `.adoc`.
 
