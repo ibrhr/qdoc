@@ -12,7 +12,10 @@ Queries a documentation source. The LLM fetches the doc index, selects relevant 
 
 ```bash
 qdoc go "channels vs mutexes"
+qdoc python "asyncio vs threading"
 qdoc fastapi "dependency injection patterns"
+qdoc react "useCallback dependencies"
+qdoc nextjs "server components vs client components"
 qdoc ./docs "deployment guide"
 qdoc --json go "generics" | jq '.answer'
 ```

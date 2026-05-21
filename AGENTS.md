@@ -1,7 +1,6 @@
 # AGENTS.md — qdoc
 
-> **Agent for Agents** — documentation research for AI coding agents.
-> One call, one answer. No trial-and-error. No wasted tokens.
+> **qdoc - Query the Docs** — qdoc is a tui/cli that you or your coding agent can use to get fast, accurate, relevant, and up-to-date information about any library or framework you're using!
 
 ## Build & verify
 
@@ -156,7 +155,10 @@ docSource.FetchIndex → provider.ResolveClient → Client.Stream(goroutine)
 ```bash
 # Query docs
 qdoc go "query"              # query Go docs (go.dev/doc)
+qdoc python "query"          # query Python docs (docs.python.org/3)
 qdoc fastapi "query"         # query FastAPI docs (fastapi.tiangolo.com)
+qdoc react "query"           # query React docs (react.dev)
+qdoc nextjs "query"          # query Next.js docs (nextjs.org/docs)
 qdoc ./dir "query"           # query local directory of docs
 
 # Headless / agent modes
@@ -186,7 +188,10 @@ Built-in sources defined in `internal/docsource/source.go`:
 | Name | URL | Index |
 |------|-----|-------|
 | `go` | go.dev/doc | Parsed from `/doc/` page |
+| `python` | docs.python.org/3 | Parsed from `/3/` page |
+| `nextjs` | nextjs.org/docs | Parsed from `/docs` sidebar |
 | `fastapi` | fastapi.tiangolo.com | Parsed from `/` page |
+| `react` | react.dev | Parsed from `/learn` sidebar |
 
 `./path` → local directory: recursively walks `.md`, `.mdx`, `.html`, `.rst`, `.txt`, `.adoc`.
 

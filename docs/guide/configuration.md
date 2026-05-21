@@ -68,7 +68,7 @@ qdoc set key openai sk-abc123yourkey
 
 ### Using Environment Variables
 
-For CI pipelines or containerized environments, skip the config file entirely:
+If you prefer to skip the config file entirely, you can use environment variables:
 
 ```bash
 export QDOC_PROVIDER=openai

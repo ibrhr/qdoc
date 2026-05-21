@@ -19,6 +19,10 @@ qdoc set key openai
 
 # Ask a question
 qdoc go "how do generics work?"
+qdoc python "typing Protocol vs ABC"
+qdoc fastapi "dependency injection patterns"
+qdoc react "useEffect cleanup"
+qdoc nextjs "app router layouts"
 ```
 
 That's it. qdoc fetches the Go documentation index, has the LLM pick relevant pages, reads them in parallel, and answers.
@@ -38,7 +42,7 @@ Prints a markdown answer to stdout. No TUI, no interaction, just the answer.
 qdoc --json go "error wrapping with fmt.Errorf" | jq '.answer'
 ```
 
-For CI pipelines, agent tool calls, and any automated context. See [Agent Usage](/guide/agent-usage) for integration guides.
+For agent tool calls and any automated context. See [Agent Usage](/guide/agent-usage) for integration guides.
 
 ---
 

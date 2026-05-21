@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: "qdoc"
-  text: "Agent for Agents"
-  tagline: Documentation research for AI coding agents. One call, one answer. No trial-and-error. No wasted tokens.
+  text: "Query the Docs"
+  tagline: qdoc is a tui/cli to get fast, accurate, relevant, and up-to-date information about any library or framework.
   actions:
     - theme: brand
       text: Get Started
@@ -19,7 +19,7 @@ hero:
 features:
   - icon: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2L2 7l10 5 10-5-10-5z'/><path d='M2 17l10 5 10-5'/><path d='M2 12l10 5 10-5'/></svg>"
     title: Saves Agent Tokens
-    details: Agents don't need to guess which doc pages are relevant. qdoc passes the full doc index to an LLM, which selects exactly the right pages. No wasted fetches. No irrelevant content. The LLM reads the right pages on the first pass.
+    details: Because when you let your main coding agent search for something on the internet, it fills its context with a lot of irrelevant information and adds up to your expenses, making it more expensive AND degrades your agent's performance. But when you use qdoc, your agent asks a question and gets a comprehensive informed answer without rotting its context.
   - icon: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='16' y1='13' x2='8' y2='13'/><line x1='16' y1='17' x2='8' y2='17'/><polyline points='10 9 9 9 8 9'/></svg>"
     title: One-Shot Answers
     details: Ask a question. Get a single, definitive answer with citations. No back-and-forth. No clarifying questions. qdoc does up to 5 turns of doc research internally, then returns the synthesized result as one response.
@@ -34,5 +34,5 @@ features:
     details: OpenAI, DeepSeek, Opencode Zen, Opencode Go — four providers built in. Any OpenAI-compatible API endpoint works. Switch providers with one command. Env var or config file. Your call.
   - icon: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/></svg>"
     title: Any Docs Source
-    details: "Built-in: Go standard library docs and FastAPI framework docs. Point qdoc at any local directory of markdown, HTML, reStructuredText, or AsciiDoc files. Extensible with custom sources."
+    details: "Built-in: Go, Python, Next.js, React, and FastAPI docs. Point qdoc at any local directory of markdown, HTML, reStructuredText, or AsciiDoc files. Extensible with custom sources."
 ---

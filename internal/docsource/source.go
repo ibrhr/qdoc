@@ -54,6 +54,275 @@ Standard library packages: pkg.go.dev/<import-path>. Include the URL when releva
 Pick the most relevant pages and read them. Use the full URLs from the list below.`,
 	},
 	{
+		Name:       "nextjs",
+		BaseURL:    "https://nextjs.org/docs",
+		IndexURL:   "https://nextjs.org/docs",
+		LinkPrefix: "/docs/",
+		SystemPrompt: `Next.js documentation is at https://nextjs.org/docs. All URLs in the file list below are complete — use them as-is.
+
+Next.js is a React framework with two routers:
+
+  App Router (/docs/app/) — MODERN. Uses React Server Components, streaming, Server Actions.
+                            Always prefer this for new questions unless the user says "Pages Router."
+  Pages Router (/docs/pages/) — LEGACY. Traditional React SSR. Only use if explicitly asked.
+
+Where things live under /docs/app/:
+
+  getting-started/              — Core concepts (installation, project-structure, layouts-and-pages,
+                                  linking-and-navigating, server-and-client-components,
+                                  fetching-data, mutating-data, caching, revalidating,
+                                  error-handling, css, images, fonts, metadata, route-handlers,
+                                  proxy, deploying, upgrading)
+
+  guides/                       — Task-focused tutorials
+    authentication, authorization patterns, middleware for auth
+    forms and mutations (Server Actions, useFormStatus, useActionState)
+    database integration, data fetching patterns, data security
+    rendering strategies (SSG/ISR/SSR/PPR), streaming, static exports
+    caching, revalidation, stale-while-revalidate
+    routing patterns (dynamic routes, parallel routes, intercepting routes, middleware)
+    internationalization (i18n), SEO, metadata, OG images
+    environment variables, draft mode, preview mode
+    testing (Cypress, Jest, Playwright, Vitest)
+    deployment (Vercel, self-hosting, Docker, static hosting)
+    AI agents, OpenTelemetry, MDX, PWA, SPAs, Tailwind CSS, Sass, CSS-in-JS
+    migrating (from CRA, Vite, Pages Router; codemods for v14→v15→v16)
+
+  api-reference/                — Technical reference
+    directives/                   'use client', 'use server', 'use cache'
+    components/                   <Image>, <Link>, <Script>, <Form>, <Font>
+    functions/                    cookies, headers, fetch, generateMetadata, generateStaticParams,
+                                  redirect, notFound, revalidatePath, revalidateTag,
+                                  useRouter, useParams, usePathname, useSearchParams,
+                                  unstable_cache, after, draftMode, connection
+    file-conventions/             page.js, layout.js, loading.js, error.js, not-found.js,
+                                  route.js, template.js, default.js, forbidden.js, unauthorized.js
+    metadata-files/               sitemap.xml, robots.txt, opengraph-image, manifest.json
+    route-segment-config/         dynamic, revalidate, runtime, preferredRegion, maxDuration
+    next-config-js/               all next.config.js options (basePath, redirects, rewrites,
+                                  images, headers, turbopack, webpack, output, etc.)
+    cli/                          create-next-app, next CLI commands
+
+  architecture/                 — Internals (accessibility, Fast Refresh, compiler, supported browsers)
+  community/                    — Contribution guide, Rspack
+
+Pages Router structure (only when explicitly requested):
+  /docs/pages/building-your-application/  — Routing, rendering, data fetching (getStaticProps, etc.)
+  /docs/pages/api-reference/             — Components, functions, config for Pages Router
+
+For "how do I X" questions, start with /docs/app/getting-started/ for fundamentals or /docs/app/guides/ for specific use cases. For API signatures, parameters, or config options, use /docs/app/api-reference/. Prefer App Router answers unless Pages Router is explicitly mentioned.
+
+Pick the most relevant pages and read them. Use the full URLs from the list below.`,
+	},
+	{
+		Name:       "python",
+		BaseURL:    "https://docs.python.org/3",
+		IndexURL:   "https://docs.python.org/3/",
+		LinkPrefix: "",
+		SystemPrompt: `Python 3 documentation is at https://docs.python.org/3/. All URLs in the file list below are complete — use them as-is.
+
+Where things live under docs.python.org/3/:
+
+  tutorial/                 — The Python Tutorial (classes, modules, errors, stdlib tour, etc.)
+  library/                  — The Python Standard Library — THIS IS WHERE MOST ANSWERS LIVE
+    library/functions.html    Built-in functions (print, len, range, zip, map, filter, sorted,
+                              open, isinstance, hasattr, getattr, enumerate, any, all, etc.)
+    library/stdtypes.html     Built-in types (str, int, float, list, dict, set, tuple, bool,
+                              bytes, bytearray, memoryview, type, range, slice, frozenset)
+    library/exceptions.html   Built-in exceptions (Exception, ValueError, TypeError, KeyError,
+                              IndexError, OSError, RuntimeError, StopIteration, etc.)
+    library/datetime.html     Date, time, datetime, timedelta, timezone
+    library/collections.html  namedtuple, deque, Counter, defaultdict, OrderedDict, ChainMap
+    library/collections.abc.html  Abstract base classes for containers
+    library/math.html         Math (sqrt, ceil, floor, isclose, comb, perm, etc.) + cmath
+    library/statistics.html   Statistics (mean, median, stdev, quantiles, correlation)
+    library/random.html       Random numbers (random, randint, choice, shuffle, sample)
+    library/re.html           Regular expressions (search, match, findall, sub, compile)
+    library/json.html         JSON (loads, dumps, load, dump, JSONDecoder, JSONEncoder)
+    library/os.html           OS interface (environ, chdir, listdir, mkdir, walk, stat, etc.)
+    library/os.path.html      Path manipulation (join, split, exists, isfile, basename, etc.)
+    library/pathlib.html      Object-oriented filesystem paths (Path, read_text, glob, iterdir)
+    library/sys.html          System-specific (argv, path, version, stdin/stdout, exit, modules)
+    library/subprocess.html   Subprocess management (run, Popen, CalledProcessError)
+    library/shutil.html       High-level file ops (copy, move, rmtree, make_archive)
+    library/io.html           I/O tools (open, TextIOWrapper, BytesIO, StringIO)
+    library/logging.html      Logging (getLogger, handlers, formatters, filters)
+    library/logging.handlers.html  Logging handlers (StreamHandler, FileHandler, RotatingFileHandler)
+    library/argparse.html     CLI argument parsing (ArgumentParser, add_argument)
+    library/configparser.html Config files (ConfigParser, read, sections, get)
+    library/tempfile.html     Temp files and dirs (TemporaryFile, NamedTemporaryFile, mkdtemp)
+    library/glob.html         File globbing (glob, iglob)
+    library/fnmatch.html      Filename pattern matching
+    library/unittest.html     Unit testing (TestCase, assertEqual, mock, setUp, tearDown)
+    library/unittest.mock.html  Mock objects (Mock, MagicMock, patch, sentinel, call)
+    library/doctest.html      Test interactive Python examples
+    library/typing.html       Type hints (Any, Union, Optional, Callable, Protocol, TypedDict,
+                              Sequence, Mapping, TypeVar, Generic, overload, cast, Final, Literal)
+    library/dataclasses.html  Data classes (dataclass, field, asdict, astuple)
+    library/enum.html         Enumerations (Enum, IntEnum, StrEnum, Flag, auto)
+    library/itertools.html    Iterator tools (chain, cycle, product, combinations, permutations,
+                              groupby, islice, zip_longest, accumulate, tee)
+    library/functools.html    Higher-order functions (lru_cache, cache, partial, reduce, wraps,
+                              singledispatch, total_ordering, cmp_to_key)
+    library/operator.html     Standard operators as functions (itemgetter, attrgetter, methodcaller)
+    library/contextlib.html   Context managers (contextmanager, suppress, redirect_stdout, ExitStack)
+    library/threading.html    Thread-based parallelism (Thread, Lock, Event, Condition, Semaphore)
+    library/multiprocessing.html  Process-based parallelism (Process, Pool, Queue, Pipe, Manager)
+    library/concurrent.futures.html  Executor, ThreadPoolExecutor, ProcessPoolExecutor
+    library/asyncio.html      Async I/O (run, create_task, gather, sleep, Queue, Streams, locks)
+    library/asyncio-task.html Coroutines, Tasks, TaskGroup, shielding
+    library/asyncio-stream.html  Streams (open_connection, start_server)
+    library/asyncio-sync.html    Sync primitives (Lock, Event, Condition, Semaphore)
+    library/asyncio-queue.html   Queues
+    library/socket.html       Low-level networking (socket, connect, bind, listen, accept)
+    library/ssl.html          TLS/SSL (SSLContext, wrap_socket)
+    library/http.client.html  HTTP client (HTTPConnection, HTTPSConnection)
+    library/http.server.html  HTTP server (HTTPServer, BaseHTTPRequestHandler)
+    library/urllib.request.html  URL opening (urlopen, Request)
+    library/urllib.parse.html    URL parsing (urlparse, urlencode, quote)
+    library/xml.etree.elementtree.html  XML (Element, SubElement, parse, iterfind)
+    library/xml.html           Other XML modules
+    library/html.parser.html   HTML parser
+    library/html.html          HTML escaping
+    library/sqlite3.html       SQLite (connect, execute, executemany, Row, backup)
+    library/csv.html            CSV (reader, writer, DictReader, DictWriter, Sniffer)
+    library/pickle.html         Object serialization (dump, load, dumps, loads)
+    library/shelve.html         Persistent dict
+    library/copy.html           Shallow and deep copy
+    library/decimal.html        Decimal fixed-point arithmetic
+    library/fractions.html      Rational numbers
+    library/hashlib.html        Secure hashes (md5, sha256, sha3, pbkdf2, scrypt)
+    library/hmac.html           Keyed-Hashing for Message Authentication
+    library/base64.html         Base64, Base32, Base16 encoding
+    library/struct.html         Pack/unpack binary data (pack, unpack, calcsize)
+    library/binascii.html       Binary/ASCII conversion
+    library/textwrap.html       Text wrapping and filling
+    library/difflib.html        Sequence comparison (unified_diff, context_diff, get_close_matches)
+    library/gc.html             Garbage collection
+    library/traceback.html      Print or retrieve stack traces
+    library/inspect.html        Inspect live objects (signature, getmembers, getsource)
+    library/abc.html            Abstract base classes
+    library/weakref.html        Weak references
+    library/types.html          Dynamic type creation (ModuleType, FunctionType, SimpleNamespace)
+    library/codecs.html         Codec registry (encode, decode, open with encoding)
+    library/pprint.html         Pretty-print (pprint, pformat)
+    library/time.html           Time access (time, sleep, perf_counter, strftime, strptime)
+    library/calendar.html       Calendar functions
+    library/zoneinfo.html       IANA time zone support
+    library/uuid.html           UUID objects
+    library/gzip.html           gzip compression
+    library/zipfile.html        ZIP archive handling
+    library/tarfile.html        Tar archive handling
+    library/zlib.html           zlib compression
+    library/bz2.html            bzip2 compression
+    library/lzma.html           LZMA compression
+    library/text.html           String services overview
+    library/string.html         String constants (ascii_letters, digits), Formatter, Template
+    library/datatype.html       Data types overview
+    library/numeric.html        Numeric and math overview
+    library/filesys.html        File and directory overview
+    library/concurrency.html    Concurrency overview
+    library/netdata.html        Networking and internet overview
+    library/ipaddress.html      IPv4/IPv6 manipulation
+    library/email.html          Email (message, parser, MIME)
+    library/imaplib.html        IMAP4 protocol client
+    library/venv.html           Virtual environment creation
+    library/ensurepip.html      Bootstrapping pip
+    library/tkinter.html        Tk GUI toolkit
+    library/pdb.html            Python debugger
+    library/profile.html        Python profiler
+    library/dis.html             Disassembler
+    library/ast.html             Abstract Syntax Trees
+    library/tokenize.html        Tokenizer
+    library/importlib.html       Import machinery
+    library/pkgutil.html         Package utilities
+    library/warnings.html        Warning control
+    library/signal.html          Signal handlers
+    library/platform.html        Platform identification
+    library/atexit.html          Exit handlers
+    library/getpass.html         Portable password input
+    library/readline.html        GNU readline interface
+    library/cmd.html             Line-oriented command interpreters
+    library/shlex.html           Shell-like syntax parsing
+
+  reference/                — Language Reference
+    reference/datamodel       Objects, values, types (special methods: __init__, __str__, __eq__,
+                              __hash__, __call__, __getattr__, __enter__, __iter__, etc.)
+    reference/lexical_analysis  Tokens, keywords, identifiers, literals, f-strings
+    reference/expressions     Operators, comparisons, lambdas, await/async, yield, walrus (:=)
+    reference/compound_stmts  if/while/for/try/with/match, class/function def, async for/with
+    reference/simple_stmts    assignment, assert, pass, return, raise, break, continue, import
+    reference/executionmodel  Naming, binding, scopes (LEGB), global/nonlocal
+    reference/import          Import system, packages (__init__.py, __path__, namespace packages)
+
+  using/                    — Setup and Usage (command line options, venv, Windows, macOS)
+  howto/                    — HOWTO guides (logging, regex, sorting, unicode, functional, descriptors)
+  installing/               — Installing Python packages (pip, requirements, wheels)
+  distributing/             — Packaging and distributing (setup.py, pyproject.toml, setuptools)
+  extending/                — C extension modules, embedding Python
+  whatsnew/                 — What's New (3.14, 3.13, 3.12, ...)
+
+For "how do I use X in Python", check library/ for the relevant standard library module. For language semantics ("what is a descriptor?", "how does __init__ work?"), see reference/datamodel or reference/. For packaging, see installing/ or distributing/. For C extensions, see extending/. For beginner tutorials, see tutorial/. For "what's new in Python 3.14", see whatsnew/.
+
+Pick the most relevant pages and read them. Use the full URLs from the list below.`,
+	},
+	{
+		Name:       "react",
+		BaseURL:    "https://react.dev",
+		IndexURL:   "https://react.dev/learn",
+		LinkPrefix: "/",
+		SystemPrompt: `React documentation is at https://react.dev. All URLs in the file list below are complete — use them as-is.
+
+Where things live:
+  /learn/                         — Main tutorial and conceptual guides
+    /learn                        — Quick Start: 80% of daily React in one page
+    /learn/tutorial-tic-tac-toe   — Build a tic-tac-toe game step by step
+    /learn/thinking-in-react      — Thinking in React methodology
+    /learn/installation           — Installing and setting up React (CRA, from scratch, existing project)
+    /learn/setup                  — Editor setup, TypeScript, React DevTools
+    /learn/describing-the-ui      — Components, JSX, props, conditional rendering, lists, purity, UI as tree
+    /learn/adding-interactivity   — Events, state, render & commit, state as snapshot, queueing updates
+    /learn/managing-state         — State structure, sharing, preserving, reducer, context, scaling up
+    /learn/escape-hatches         — Refs, manipulating DOM, effects, custom hooks, separating events
+    /learn/react-compiler        — React Compiler: intro, installation, incremental adoption, debugging
+
+  /reference/react/               — React API Reference
+    Hooks: useState, useEffect, useContext, useReducer, useCallback, useMemo,
+           useRef, useImperativeHandle, useLayoutEffect, useDebugValue,
+           useDeferredValue, useTransition, useId, useActionState, useOptimistic,
+           useSyncExternalStore, useInsertionEffect, useEffectEvent
+    Components: <Fragment> (<>), <Profiler>, <StrictMode>, <Suspense>, <Activity>, <ViewTransition>
+    APIs: createContext, memo, lazy, startTransition, use, cache, cacheSignal,
+          captureOwnerStack, act, addTransitionType
+
+  /reference/react-dom/           — React DOM APIs (web/browser only)
+    Hooks: useFormStatus
+    Components: <form>, <input>, <select>, <textarea>, <option>, <progress>,
+                <link>, <meta>, <script>, <style>, <title> (all HTML/SVG elements)
+    Client APIs: createRoot, hydrateRoot
+    Server APIs: renderToReadableStream, renderToPipeableStream, renderToString,
+                 renderToStaticMarkup, resume, resumeToPipeableStream
+    Static APIs: prerender, prerenderToNodeStream, resumeAndPrerender
+
+  /reference/rules/               — Rules of React
+    components-and-hooks-must-be-pure — Purity, idempotence, side-effect rules
+    react-calls-components-and-hooks  — React owns the call schedule
+    rules-of-hooks                     — Only call hooks at top level, from React functions
+
+  /reference/rsc/                 — React Server Components
+    server-components, server-functions, directives ('use client', 'use server')
+
+  /reference/react-compiler/      — Compiler reference
+    configuration, compilationMode, gating, logger, directives ('use memo', 'use no memo')
+
+  /reference/eslint-plugin-react-hooks/ — Lint rules (exhaustive-deps, rules-of-hooks, purity, etc.)
+  /reference/react/legacy         — Legacy APIs (Component, createElement, cloneElement, createRef, etc.)
+
+For "how do I use X" questions, start with /learn/. For specific API signatures, parameters, return values, or edge-case behavior, see /reference/react/ or /reference/react-dom/. For server-side rendering, see /reference/react-dom/server. For React Server Components, see /reference/rsc/. For lint rules, see /reference/eslint-plugin-react-hooks/.
+
+Pick the most relevant pages and read them. Use the full URLs from the list below.`,
+	},
+	{
 		Name:       "fastapi",
 		BaseURL:    "https://fastapi.tiangolo.com",
 		IndexURL:   "https://fastapi.tiangolo.com/",

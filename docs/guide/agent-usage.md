@@ -87,7 +87,7 @@ Fields:
 | Field | Type | Description |
 |-------|------|-------------|
 | `answer` | `string` | The synthesized answer in markdown |
-| `source` | `string` | Doc source queried (`go`, `fastapi`, `./path`) |
+| `source` | `string` | Doc source queried (`go`, `python`, `fastapi`, `react`, `nextjs`, `./path`) |
 | `steps` | `[]Step` | Research trace: each phase and what was done |
 
 Parse with `jq`:
@@ -134,7 +134,7 @@ Alternatively, add this as a custom instruction:
 
 > When you need documentation about a framework or library, run:
 > `qdoc --no-tui <source> <query>`
-> Available sources: `go`, `fastapi`, or any local docs directory (`./path`).
+> Available sources: `go`, `python`, `fastapi`, `react`, `nextjs`, or any local docs directory (`./path`).
 > Always use `--no-tui` for agent mode.
 
 ### GitHub Copilot
@@ -145,7 +145,7 @@ Add to your `.github/copilot-instructions.md`:
 ## Documentation research
 
 When you need documentation about a framework or library, run `qdoc --no-tui <source> <query>`.
-Available sources: `go`, `fastapi`, or any local docs directory (`./path`).
+Available sources: `go`, `fastapi`, `react`, `nextjs`, or any local docs directory (`./path`).
 
 Install if missing: `npm install -g qdoc-agent`
 ```
@@ -157,41 +157,9 @@ Add this to any agent's system prompt or custom instructions:
 > When you need documentation about a framework or library and `qdoc` is available, use it directly:
 > `qdoc --no-tui <source> <query>`
 >
-> Available sources: `go` (Go docs), `fastapi` (FastAPI docs), `./path` (local docs directory).
+> Available sources: `go` (Go docs), `python` (Python docs), `fastapi` (FastAPI docs), `react` (React docs), `nextjs` (Next.js docs), `./path` (local docs directory).
 > This returns a single markdown answer — no conversation, no follow-ups.
 > The answer is more reliable than your training data for current API details.
-
----
-
-## CI/CD Pipelines
-
-### GitHub Actions
-
-```yaml
-name: Doc Check
-on: [push]
-jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install qdoc
-        run: curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
-
-      - name: Query docs
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          qdoc --json --no-tui go "breaking changes in Go 1.24" > go124.json
-          cat go124.json | jq '.answer'
-```
-
-### Makefile target
-
-```makefile
-docs-check:
-	@qdoc --version > /dev/null 2>&1 || npm install -g qdoc-agent
-	@qdoc --no-tui ./docs "API reference for authentication endpoints"
-```
 
 ---
 
@@ -274,10 +242,9 @@ Agents should check `$?` after each call. Non-zero exit code = retry or escalate
 
 ---
 
-## Environment Variables for CI
+## Environment Variables
 
 ```bash
-# Set these in CI secrets, not in code
 export QDOC_PROVIDER=openai
 export QDOC_MODEL=gpt-5.4-mini
 export OPENAI_API_KEY=$OPENAI_API_KEY

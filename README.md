@@ -1,51 +1,12 @@
-# qdoc — Agent for Agents
+# qdoc - Query the Docs
 
-Documentation research for AI coding agents. No trial-and-error. No wasted tokens. One call, one answer.
+qdoc is a tui/cli that you or your coding agent can use to get fast, accurate, relevant, and up-to-date information about any library or framework you're using!
 
-```
-$ qdoc go "how do generics work in Go"
+Under the hood, qdoc is an agent equipped with specialized system prompts for each documentation, when you ask about something, we load its specific guide, and qdoc will traverse their docs until it finds an accurate answer to your question.
 
-● Thinking ···
-● Calling gpt-5.5 on openai
-▶ READ: tutorial/generics
-▶ READ: effective_go
-▶ READ: go1.24
+## Why use qdoc?
 
-## Generics in Go
-
-Type parameters enable...
-```
-
----
-
-## Why qdoc?
-
-AI coding agents waste tokens when researching documentation. The typical agent loop:
-
-```
-Agent: searches docs index → finds 200+ links
-Agent: fetches 5 pages, none are right
-Agent: tries 5 more, close but incomplete
-Agent: one more round, finally gets it
-Agent: synthesizes answer
-
-Total: ~10 page fetches, ~40% irrelevant content, 3 LLM rounds
-```
-
-**qdoc replaces this with a one-shot LLM call:**
-
-```
-qdoc: fetches doc index (1 HTTP call)
-qdoc: passes index → query to LLM (1 inference)
-LLM: returns "read these 3 specific pages"
-qdoc: fetches them in parallel (3 HTTP calls)
-qdoc: if needed, asks LLM for one more round (up to 5 turns)
-LLM: synthesizes final answer with citations
-
-Total: 1-5 page fetches, 100% LLM-selected relevance, 1-2 LLM rounds
-```
-
-The difference compounds: an agent making 10 doc queries per session saves 50+ unnecessary page fetches and 15-20 redundant LLM rounds.
+Because when you let your main coding agent search for something on the internet, it fills its context with alot of irrelevant information and adds up to your expenses, making it more expensive AND degrades your agent's performance. But when you use qdoc, your agent asks a question and gets a comprehensive informed answer without rotting its context.
 
 ---
 
@@ -61,7 +22,10 @@ npm install -g qdoc-agent
 
 ```bash
 qdoc set key openai          # prompts for your API key (input hidden)
-qdoc go "generics tutorial"  # ask your first question
+qdoc go "generics tutorial"   # ask your first question
+qdoc python "type hints"      # Python stdlib docs
+qdoc react "hooks rules"      # React docs via react.dev
+qdoc nextjs "app router"      # Next.js docs via nextjs.org
 ```
 
 ---
@@ -72,7 +36,10 @@ qdoc go "generics tutorial"  # ask your first question
 
 ```bash
 qdoc go "how does context work?"
+qdoc python "asyncio gather vs create_task"
 qdoc fastapi "dependency injection patterns"
+qdoc react "useEffect cleanup vs useLayoutEffect"
+qdoc nextjs "server actions vs api routes"
 qdoc ./my-docs "deployment guide"
 ```
 
@@ -86,24 +53,41 @@ qdoc --no-tui go "error wrapping with fmt.Errorf"
 
 # Structured JSON — for programmatic consumption
 qdoc --json go "generics constraints" | jq '.answer'
-
-# In CI pipelines
-qdoc --no-tui --json go "release notes for Go 1.24" > result.json
 ```
 
-### Integration
+## Give Your AI Agent the qdoc skill
 
-Copy [`skill.md`](skill.md) to your agent's skills directory:
+You can give your favorite coding agent (OpenCode, Claude Code, Cursor, Windsurf, etc.) the ability to autonomously read official documentation using `qdoc`.
 
-| Agent | Path |
-|-------|------|
-| **opencode** | `~/.agents/skills/qdoc/SKILL.md` |
-| **Claude Code** | `~/.claude/skills/qdoc.md` |
-| **Cursor** | Add as custom instruction |
+When you install the **qdoc skill**, your agent will automatically use the CLI under the hood whenever you ask library-specific questions, ensuring its answers are accurate, grounded, and up-to-date!
 
-Or instruct any agent manually:
+There are two ways to teach your agent how to use `qdoc`:
 
-> When you need documentation about a framework or library, run `qdoc --no-tui <source> <query>`. Available sources: go, fastapi, or any local docs directory.
+### Method 1: Using the Skills CLI (Recommended)
+
+The easiest way to install the skill is using the universal [Agent Skills](https://skills.sh/) package manager. Simply run:
+
+```bash
+npx skills add ibrhr/qdoc
+```
+*This command automatically detects your AI agent and seamlessly links the qdoc capabilities to your workspace.*
+
+### Method 2: Manual Installation
+
+If you prefer to install it manually, or if you're using an agent that relies on local workspace rules, you can download the configuration file directly into your project.
+
+1. Download the skill file to your workspace:
+   ```bash
+   curl -O https://raw.githubusercontent.com/ibrhr/qdoc/main/SKILL.md
+   ```
+
+2. Move it to the appropriate directory based on your agent:
+   - **OpenCode**: `.opencode/skills/qdoc/SKILL.md`
+   - **Claude Code**: `.claude/skills/qdoc/SKILL.md`
+   - **Cursor**: Rename it to `.cursor/rules/qdoc.mdc`
+   - **Windsurf**: Rename it to `.windsurfrules`
+
+**That's it!** Now, just tell your agent: *"How do I do X in FastAPI?"* and watch it trigger `qdoc` to fetch the exact, updated answer.
 
 ---
 
@@ -161,7 +145,10 @@ Resolution order: `QDOC_*` environment variables → config file → built-in de
 
 ```bash
 qdoc go "query"               # query Go docs
+qdoc python "query"           # query Python docs
 qdoc fastapi "query"          # query FastAPI docs
+qdoc react "query"            # query React docs
+qdoc nextjs "query"           # query Next.js docs
 qdoc ./my-docs "query"        # query local docs directory
 
 qdoc provider                 # interactive provider picker (TUI)
