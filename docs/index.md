@@ -17,15 +17,6 @@ hero:
       link: https://github.com/ibrhr/qdoc
 
 features:
-  - icon: "⚡"
-    title: 3x Fewer Tokens
-    details: qdoc uses ~2-4k tokens per query vs 10-15k+ when agents research docs manually.
-  - icon: "📚"
-    title: 6 Sources Built In
-    details: Go, Python, Next.js, React, FastAPI, Pydantic — plus any local docs directory.
-  - icon: "🔌"
-    title: 4 Providers
-    details: OpenAI, DeepSeek, OpenCode Zen, OpenCode Go — or any OpenAI-compatible API.
   - icon: "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2L2 7l10 5 10-5-10-5z'/><path d='M2 17l10 5 10-5'/><path d='M2 12l10 5 10-5'/></svg>"
     title: Saves Agent Tokens
     details: When your agent researches docs manually, it burns 10-15k tokens per question across multiple rounds of guessing and fetching. qdoc does the research internally and returns a single answer — typically 3-4x fewer tokens.
