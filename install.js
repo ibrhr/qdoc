@@ -1,6 +1,7 @@
 const { execSync } = require("child_process");
 const { existsSync, renameSync, mkdirSync, rmSync, writeFileSync } = require("fs");
 const { join } = require("path");
+const crypto = require("crypto");
 const https = require("https");
 
 const REPO = "ibrhr/qdoc";
@@ -52,13 +53,30 @@ async function main() {
   process.stderr.write(`qdoc: downloading ${url}\n`);
   const buf = await fetch(url);
 
+  const archiveName = `qdoc_${platform}.${process.platform === "win32" ? "zip" : "tar.gz"}`;
+  process.stderr.write(`qdoc: verifying checksum\n`);
+  const checksumUrl = `https://github.com/${REPO}/releases/download/${tag}/checksums.txt`;
+  const checksumBuf = await fetch(checksumUrl);
+  const checksums = checksumBuf.toString("utf-8");
+  const line = checksums.split("\n").find(l => l.includes(archiveName));
+  if (!line) throw new Error(`checksum entry not found for ${archiveName}`);
+  const expected = line.split(/\s+/)[0];
+  const actual = crypto.createHash("sha256").update(buf).digest("hex");
+  if (expected !== actual) throw new Error(`checksum mismatch`);
+
   const tmp = join(pkgDir, ".qdoc_tmp");
   mkdirSync(tmp, { recursive: true });
 
   try {
     if (process.platform === "win32") {
       writeFileSync(join(tmp, "qdoc.zip"), buf);
-      execSync(`tar -xf qdoc.zip`, { cwd: tmp, stdio: "ignore" });
+      const zipPath = join(tmp, "qdoc.zip").replace(/'/g, "''");
+      const destPath = tmp.replace(/'/g, "''");
+      try {
+        execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force"`, { stdio: "ignore" });
+      } catch (_) {
+        execSync(`tar -xf qdoc.zip`, { cwd: tmp, stdio: "ignore" });
+      }
     } else {
       writeFileSync(join(tmp, "qdoc.tar.gz"), buf);
       execSync(`tar xzf qdoc.tar.gz`, { cwd: tmp, stdio: "ignore" });

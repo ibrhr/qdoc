@@ -117,6 +117,20 @@ else
     curl -sfL -o "$tmp/$APP$ext" "$url"
 fi
 
+# ── checksum verification ────────────────────────────────────────────
+
+checksum_url="https://github.com/$REPO/releases/download/$tag/checksums.txt"
+curl -sfL -o "$tmp/checksums.txt" "$checksum_url"
+archive_name=$(basename "$url")
+expected=$(grep -F "$archive_name" "$tmp/checksums.txt" | awk '{print $1}')
+actual=$(sha256sum "$tmp/$APP$ext" | awk '{print $1}')
+if [ "$expected" != "$actual" ] || [ -z "$expected" ]; then
+    echo -e "${RED}Checksum verification failed for $archive_name${NC}" >&2
+    rm -rf "$tmp"
+    exit 1
+fi
+echo -e "${MUTED}Checksum verified${NC}"
+
 # ── extract & install ────────────────────────────────────────────────
 
 tar xzf "$tmp/$APP$ext" -C "$tmp"
