@@ -45,65 +45,19 @@ qdoc --json go "generics" | jq '.steps[] | "\(.phase): \(.detail)"'
 
 ## Agent Integration
 
-### opencode
+qdoc ships with a skill file that teaches your agent when and how to invoke it — which sources are available, the correct CLI syntax, and that `--no-tui` is the mode to use. With the skill loaded, your agent knows qdoc is an option without you having to write custom instructions.
 
-Copy the skill file to your opencode skills directory:
-
-```bash
-mkdir -p ~/.agents/skills/qdoc
-cp skill.md ~/.agents/skills/qdoc/SKILL.md
-```
-
-opencode loads agent skills from `~/.agents/skills/`. After copying, opencode will know how to use `qdoc` automatically. Verify:
+### Install via npx (recommended)
 
 ```bash
-ls ~/.agents/skills/qdoc/SKILL.md
+npx skills add ibrhr/qdoc
 ```
 
-### Claude Code
+This downloads and installs the qdoc skill into your agent's skills directory automatically.
 
-```bash
-cp skill.md ~/.claude/skills/qdoc.md
-```
+### Manual
 
-Claude Code reads skills from `~/.claude/skills/*.md`. The skill teaches Claude when to invoke qdoc, the correct CLI syntax, and which sources are available.
-
-### Cursor
-
-1. Open Cursor Settings → Rules
-2. Add a new Project Rule or User Rule
-3. Paste the contents of `skill.md`
-
-Alternatively, add this as a custom instruction:
-
-> When you need documentation about a framework or library, run:
-> `qdoc --no-tui <source> <query>`
-> Available sources: `go`, `python`, `fastapi`, `react`, `nextjs`, `pydantic`, or any local docs directory (`./path`).
-> Always use `--no-tui` for agent mode.
-
-### GitHub Copilot
-
-Add to your `.github/copilot-instructions.md`:
-
-```markdown
-## Documentation research
-
-When you need documentation about a framework or library, run `qdoc --no-tui <source> <query>`.
-Available sources: `go`, `fastapi`, `react`, `nextjs`, `pydantic`, or any local docs directory (`./path`).
-
-Install if missing: `npm install -g qdoc-agent`
-```
-
-### Manual (any agent)
-
-Add this to any agent's system prompt or custom instructions:
-
-> When you need documentation about a framework or library and `qdoc` is available, use it directly:
-> `qdoc --no-tui <source> <query>`
->
-> Available sources: `go` (Go docs), `python` (Python docs), `fastapi` (FastAPI docs), `react` (React docs), `nextjs` (Next.js docs), `pydantic` (Pydantic docs), `./path` (local docs directory).
-> This returns a single markdown answer — no conversation, no follow-ups.
-> The answer is more reliable than your training data for current API details.
+Copy [SKILL.md](https://github.com/ibrhr/qdoc/blob/main/SKILL.md) from the repo into your agent's skills directory.
 
 ---
 
