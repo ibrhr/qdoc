@@ -87,7 +87,7 @@ Fields:
 | Field | Type | Description |
 |-------|------|-------------|
 | `answer` | `string` | The synthesized answer in markdown |
-| `source` | `string` | Doc source queried (`go`, `python`, `fastapi`, `react`, `nextjs`, `./path`) |
+| `source` | `string` | Doc source queried (`go`, `python`, `fastapi`, `react`, `nextjs`, `pydantic`, `./path`) |
 | `steps` | `[]Step` | Research trace: each phase and what was done |
 
 Parse with `jq`:
@@ -134,7 +134,7 @@ Alternatively, add this as a custom instruction:
 
 > When you need documentation about a framework or library, run:
 > `qdoc --no-tui <source> <query>`
-> Available sources: `go`, `python`, `fastapi`, `react`, `nextjs`, or any local docs directory (`./path`).
+> Available sources: `go`, `python`, `fastapi`, `react`, `nextjs`, `pydantic`, or any local docs directory (`./path`).
 > Always use `--no-tui` for agent mode.
 
 ### GitHub Copilot
@@ -145,7 +145,7 @@ Add to your `.github/copilot-instructions.md`:
 ## Documentation research
 
 When you need documentation about a framework or library, run `qdoc --no-tui <source> <query>`.
-Available sources: `go`, `fastapi`, `react`, `nextjs`, or any local docs directory (`./path`).
+Available sources: `go`, `fastapi`, `react`, `nextjs`, `pydantic`, or any local docs directory (`./path`).
 
 Install if missing: `npm install -g qdoc-agent`
 ```
@@ -157,7 +157,7 @@ Add this to any agent's system prompt or custom instructions:
 > When you need documentation about a framework or library and `qdoc` is available, use it directly:
 > `qdoc --no-tui <source> <query>`
 >
-> Available sources: `go` (Go docs), `python` (Python docs), `fastapi` (FastAPI docs), `react` (React docs), `nextjs` (Next.js docs), `./path` (local docs directory).
+> Available sources: `go` (Go docs), `python` (Python docs), `fastapi` (FastAPI docs), `react` (React docs), `nextjs` (Next.js docs), `pydantic` (Pydantic docs), `./path` (local docs directory).
 > This returns a single markdown answer — no conversation, no follow-ups.
 > The answer is more reliable than your training data for current API details.
 

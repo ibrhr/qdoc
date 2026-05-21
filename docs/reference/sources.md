@@ -14,6 +14,26 @@ qdoc go "generics type constraints"
 
 The LLM is given a system prompt mapping the `/doc/` directory structure (tutorials, modules, database guides, release notes, security docs, etc.) and knows about `pkg.go.dev` for standard library package references.
 
+### Pydantic (`pydantic`)
+
+Pydantic documentation at [pydantic.dev](https://pydantic.dev/docs/validation/latest/get-started/). Covers the full V2 Validation library — models, fields, validators, serialization, types, configuration, API reference, and more.
+
+```bash
+qdoc pydantic "BaseModel with field validators"
+qdoc pydantic "model_dump vs model_dump_json exclude fields"
+qdoc pydantic "discriminated unions with Tag"
+```
+
+The LLM receives a comprehensive system prompt covering:
+
+- **Get Started** — Welcome, installation, why Pydantic, migration guide (V1 to V2), version policy, contributing, changelog
+- **Concepts** — Models (BaseModel, generic models, RootModel, nested models), Fields (Field(), Annotated, aliases, constraints, computed fields), Validators (field and model: after/before/plain/wrap), Serialization (model_dump, custom serializers, computed fields), Types (standard lib, pydantic types, custom types), Unions (discriminated, Tag), Configuration (ConfigDict), JSON Schema, JSON, Dataclasses, Strict Mode, TypeAdapter, validate_call, Conversion Table, Settings, Performance, Experimental
+- **API Reference** — BaseModel, RootModel, TypeAdapter, Field/FieldInfo, ConfigDict, functional validators/serializers, pydantic types, network types, pydantic-core (SchemaValidator, SchemaSerializer, ValidationError), pydantic-settings (BaseSettings), pydantic-extra-types (Color, Country, Payment, PhoneNumbers, etc.)
+- **Internals** — Architecture (pydantic vs pydantic-core Rust backend), core schema, annotation resolution
+- **Examples** — File validation (JSON, JSONL, CSV, TOML, YAML, XML, INI), web/API requests, queues, databases/ORMs, custom validators, dynamic models
+- **Error Messages** — ValidationError and ErrorDetails, custom error messages, validation error types, usage error types
+- **Integrations** — LLMs (llms.txt), Mypy, Pyrefly, VSCode, datamodel-code-generator, Rich, AWS Lambda
+
 ### FastAPI (`fastapi`)
 
 FastAPI framework documentation at [fastapi.tiangolo.com](https://fastapi.tiangolo.com/). Covers the tutorial, advanced guide, deployment, and all reference pages.

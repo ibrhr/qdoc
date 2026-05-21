@@ -9,8 +9,6 @@ var (
 	success = lipgloss.Color("#9ECE6A")
 	errC    = lipgloss.Color("#F7768E")
 	info    = lipgloss.Color("#7DCFFF")
-	bg      = lipgloss.Color("#1A1B26")
-	bgLight = lipgloss.Color("#292E42")
 )
 
 var baseStyle = lipgloss.NewStyle().Foreground(fg)

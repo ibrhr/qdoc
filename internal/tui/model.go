@@ -127,11 +127,12 @@ type Model struct {
 	steps   []queryStep
 	answer  string
 
-	client      *llm.Client
+	client      llm.Streamer
 	llmMessages []llm.ChatMessage
 	readFiles   map[string]string
 	iteration   int
 	maxIters    int
+	filesPending int
 
 	qState        queryState
 	streamBuf     []byte

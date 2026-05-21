@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/ibrhr/qdoc/internal/retry"
 )
 
 var httpClient = &http.Client{
@@ -29,6 +29,9 @@ type Client struct {
 	Provider string
 }
 
+func (c *Client) ModelName() string  { return c.Model }
+func (c *Client) ProviderName() string { return c.Provider }
+
 type streamRequest struct {
 	Model    string        `json:"model"`
 	Messages []ChatMessage `json:"messages"`
@@ -45,63 +48,9 @@ type streamChunk struct {
 	} `json:"choices"`
 }
 
-type retryConfig struct {
-	maxAttempts int
-	baseDelay   time.Duration
-	maxDelay    time.Duration
-}
-
-type retryableError struct {
-	statusCode int
-	msg        string
-}
-
-func (e *retryableError) Error() string {
-	return e.msg
-}
-
-var defaultRetry = retryConfig{
-	maxAttempts: 3,
-	baseDelay:   2 * time.Second,
-	maxDelay:    30 * time.Second,
-}
-
 const (
 	streamReadTimeout = 60 * time.Second
 )
-
-func backoffDelay(rc retryConfig, attempt int) time.Duration {
-	delay := rc.baseDelay
-	for i := 0; i < attempt; i++ {
-		delay *= 2
-		if delay > rc.maxDelay {
-			delay = rc.maxDelay
-			break
-		}
-	}
-	return delay + time.Duration(float64(delay)*0.3*rand.Float64())
-}
-
-func isRetryableHTTP(statusCode int) bool {
-	switch statusCode {
-	case http.StatusTooManyRequests,
-		http.StatusInternalServerError,
-		http.StatusBadGateway,
-		http.StatusServiceUnavailable,
-		http.StatusGatewayTimeout:
-		return true
-	default:
-		return false
-	}
-}
-
-func IsRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-	var retryableErr *retryableError
-	return errors.As(err, &retryableErr)
-}
 
 func (c *Client) Send(messages []ChatMessage) (string, error) {
 	body := streamRequest{
@@ -118,9 +67,9 @@ func (c *Client) Send(messages []ChatMessage) (string, error) {
 	url := strings.TrimSuffix(c.BaseURL, "/") + "/chat/completions"
 
 	var lastErr error
-	for attempt := 0; attempt < defaultRetry.maxAttempts; attempt++ {
+	for attempt := 0; attempt < retry.LLMRetry.MaxAttempts; attempt++ {
 		if attempt > 0 {
-			time.Sleep(backoffDelay(defaultRetry, attempt-1))
+			time.Sleep(retry.BackoffDelay(retry.LLMRetry, attempt-1))
 		}
 
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
@@ -133,14 +82,14 @@ func (c *Client) Send(messages []ChatMessage) (string, error) {
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			lastErr = &retryableError{msg: fmt.Sprintf("llm request: %v", err)}
+			lastErr = &retry.RetryableError{Msg: fmt.Sprintf("llm request: %v", err)}
 			continue
 		}
 
 		respBody, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			lastErr = &retryableError{msg: fmt.Sprintf("reading response: %v", err)}
+			lastErr = &retry.RetryableError{Msg: fmt.Sprintf("reading response: %v", err)}
 			continue
 		}
 
@@ -149,8 +98,8 @@ func (c *Client) Send(messages []ChatMessage) (string, error) {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if isRetryableHTTP(resp.StatusCode) {
-				lastErr = &retryableError{statusCode: resp.StatusCode, msg: fmt.Sprintf("llm API %d", resp.StatusCode)}
+			if retry.IsRetryableHTTP(resp.StatusCode) {
+				lastErr = &retry.RetryableError{StatusCode: resp.StatusCode, Msg: fmt.Sprintf("llm API %d", resp.StatusCode)}
 				continue
 			}
 			return "", fmt.Errorf("llm API error %d: %s", resp.StatusCode, string(respBody))
@@ -172,7 +121,7 @@ func (c *Client) Send(messages []ChatMessage) (string, error) {
 		return chatResp.Choices[0].Message.Content, nil
 	}
 
-	return "", fmt.Errorf("retry exhausted (%d attempts): %w", defaultRetry.maxAttempts, lastErr)
+	return "", fmt.Errorf("retry exhausted (%d attempts): %w", retry.LLMRetry.MaxAttempts, lastErr)
 }
 
 func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
@@ -193,13 +142,13 @@ func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 	url := strings.TrimSuffix(c.BaseURL, "/") + "/chat/completions"
 
 	var lastErr error
-	for attempt := 0; attempt < defaultRetry.maxAttempts; attempt++ {
+	for attempt := 0; attempt < retry.LLMRetry.MaxAttempts; attempt++ {
 		if attempt > 0 {
-			delay := backoffDelay(defaultRetry, attempt-1)
+			delay := retry.BackoffDelay(retry.LLMRetry, attempt-1)
 
 			ch <- StreamDelta{
 				Content: fmt.Sprintf("(retrying in %.1fs — attempt %d/%d)",
-					delay.Seconds(), attempt+1, defaultRetry.maxAttempts),
+					delay.Seconds(), attempt+1, retry.LLMRetry.MaxAttempts),
 				Retrying: true,
 			}
 
@@ -217,7 +166,7 @@ func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			lastErr = &retryableError{msg: fmt.Sprintf("llm request: %v", err)}
+			lastErr = &retry.RetryableError{Msg: fmt.Sprintf("llm request: %v", err)}
 			continue
 		}
 
@@ -231,8 +180,8 @@ func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			if isRetryableHTTP(resp.StatusCode) {
-				lastErr = &retryableError{statusCode: resp.StatusCode, msg: fmt.Sprintf("llm API %d: %s", resp.StatusCode, string(body))}
+			if retry.IsRetryableHTTP(resp.StatusCode) {
+				lastErr = &retry.RetryableError{StatusCode: resp.StatusCode, Msg: fmt.Sprintf("llm API %d: %s", resp.StatusCode, string(body))}
 				continue
 			}
 			ch <- StreamDelta{Err: fmt.Errorf("llm API error %d: %s", resp.StatusCode, string(body))}
@@ -284,7 +233,7 @@ func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 		resp.Body.Close()
 
 		if err := scanner.Err(); err != nil {
-			lastErr = &retryableError{msg: fmt.Sprintf("reading stream: %v", err)}
+			lastErr = &retry.RetryableError{Msg: fmt.Sprintf("reading stream: %v", err)}
 			streamFailed = true
 		}
 
@@ -294,5 +243,5 @@ func (c *Client) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 		}
 	}
 
-	ch <- StreamDelta{Err: fmt.Errorf("retry exhausted (%d attempts): %w", defaultRetry.maxAttempts, lastErr)}
+	ch <- StreamDelta{Err: fmt.Errorf("retry exhausted (%d attempts): %w", retry.LLMRetry.MaxAttempts, lastErr)}
 }

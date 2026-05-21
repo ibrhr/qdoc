@@ -204,10 +204,6 @@ func handleSet(args []string) {
 
 	switch args[0] {
 	case "key":
-		if len(args) < 2 {
-			fmt.Fprintf(os.Stderr, "Usage: qdoc set key <provider> [api-key]\n")
-			os.Exit(1)
-		}
 		provName := args[1]
 		if _, found := provider.Find(provName); !found {
 			fmt.Fprintf(os.Stderr, "qdoc: unknown provider %q\n", provName)

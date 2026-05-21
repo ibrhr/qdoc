@@ -266,7 +266,7 @@ func renderFooter(m Model) string {
 
 	prov := "?"
 	if m.client != nil {
-		prov = m.client.Provider
+		prov = m.client.ProviderName()
 	} else {
 		prov = m.Cfg.Provider
 	}

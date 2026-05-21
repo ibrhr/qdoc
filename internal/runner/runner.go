@@ -45,7 +45,7 @@ func Run(sourceName, query string, cfg config.Config) *Result {
 		result.Err = err
 		return result
 	}
-	result.Steps = append(result.Steps, Step{"Calling", fmt.Sprintf("%s via %s", client.Model, client.Provider)})
+	result.Steps = append(result.Steps, Step{"Calling", fmt.Sprintf("%s via %s", client.ModelName(), client.ProviderName())})
 
 	systemPrompt := llm.BuildSystemPrompt(source, entries, query)
 	messages := []llm.ChatMessage{
@@ -108,7 +108,7 @@ func Run(sourceName, query string, cfg config.Config) *Result {
 	return result
 }
 
-func streamToCompletion(client *llm.Client, messages []llm.ChatMessage) (string, error) {
+func streamToCompletion(client llm.Streamer, messages []llm.ChatMessage) (string, error) {
 	ch := make(chan llm.StreamDelta, 256)
 	go client.Stream(messages, ch)
 

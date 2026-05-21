@@ -55,8 +55,13 @@ func extractLinks(htmlContent, prefix, baseURL string) []Entry {
 }
 
 func blockedPath(p string) bool {
-	bad := []string{".png", ".jpg", ".svg", ".gif", ".ico", ".css", ".js",
-		"#", "mailto:", "twitter.com", "github.com", "youtube.com", "http://"}
+	suffixes := []string{".png", ".jpg", ".svg", ".gif", ".ico", ".css", ".js"}
+	for _, s := range suffixes {
+		if strings.HasSuffix(p, s) {
+			return true
+		}
+	}
+	bad := []string{"#", "mailto:", "http://", "twitter.com/", "github.com/", "youtube.com/"}
 	for _, b := range bad {
 		if strings.Contains(p, b) {
 			return true
@@ -160,7 +165,7 @@ func stripHTML(htmlContent string) string {
 
 	var text strings.Builder
 	var walk func(*html.Node)
-	skip := false
+	skipDepth := 0
 	skipData := map[string]bool{
 		"script": true, "style": true, "nav": true,
 		"header": true, "footer": true, "noscript": true,
@@ -170,10 +175,10 @@ func stripHTML(htmlContent string) string {
 	walk = func(n *html.Node) {
 		if n.Type == html.ElementNode {
 			if skipData[n.Data] {
-				skip = true
+				skipDepth++
 			}
 		}
-		if n.Type == html.TextNode && !skip {
+		if n.Type == html.TextNode && skipDepth == 0 {
 			t := strings.TrimSpace(n.Data)
 			if t != "" {
 				text.WriteString(t)
@@ -185,7 +190,7 @@ func stripHTML(htmlContent string) string {
 		}
 		if n.Type == html.ElementNode {
 			if skipData[n.Data] {
-				skip = false
+				skipDepth--
 			}
 		}
 	}

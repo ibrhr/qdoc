@@ -10,6 +10,7 @@ import (
 const maxIndexEntries = 120
 
 func BuildSystemPrompt(source docsource.Source, entries []docsource.Entry, query string) string {
+	totalEntries := len(entries)
 	maxEntries := maxIndexEntries
 	if len(entries) > maxEntries {
 		entries = entries[:maxEntries]
@@ -45,8 +46,8 @@ func BuildSystemPrompt(source docsource.Source, entries []docsource.Entry, query
 		sb.WriteString(fmt.Sprintf("  %s  (%s)\n", e.URL, e.Title))
 	}
 
-	if len(entries) >= maxEntries {
-		sb.WriteString(fmt.Sprintf("  ... (%d total, showing first %d)\n", len(entries), maxEntries))
+	if totalEntries > maxEntries {
+		sb.WriteString(fmt.Sprintf("  ... (%d total, showing first %d)\n", totalEntries, maxEntries))
 	}
 
 	sb.WriteString(fmt.Sprintf("\nQUERY: %s\n", query))

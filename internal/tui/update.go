@@ -165,8 +165,8 @@ func (m *Model) handleDocIndex(msg docIndexMsg) (tea.Model, tea.Cmd) {
 	}
 	m.client = client
 
-	m.addStep("Calling", fmt.Sprintf("%s via %s", client.Model, client.Provider))
-	m.addDisplay(dlStep, fmt.Sprintf("● Calling %s on %s", client.Model, client.Provider))
+	m.addStep("Calling", fmt.Sprintf("%s via %s", client.ModelName(), client.ProviderName()))
+	m.addDisplay(dlStep, fmt.Sprintf("● Calling %s on %s", client.ModelName(), client.ProviderName()))
 
 	systemPrompt := llm.BuildSystemPrompt(m.Source, msg.entries, m.Query)
 	m.llmMessages = []llm.ChatMessage{
@@ -175,7 +175,7 @@ func (m *Model) handleDocIndex(msg docIndexMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.sessionLog != nil {
-		m.sessionLog.Log("Provider: %s | Model: %s", client.Provider, client.Model)
+		m.sessionLog.Log("Provider: %s | Model: %s", client.ProviderName(), client.ModelName())
 		m.sessionLog.Raw("SYSTEM PROMPT", systemPrompt)
 		m.sessionLog.Log("User message: %s", m.Query)
 	}
@@ -329,6 +329,7 @@ func (m *Model) handleStreamDone() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) startFileFetches() tea.Cmd {
+	m.filesPending = len(m.pendingReads)
 	cmds := make([]tea.Cmd, 0, len(m.pendingReads))
 	for _, u := range m.pendingReads {
 		m.addStep("Reading", u)
@@ -340,6 +341,7 @@ func (m *Model) startFileFetches() tea.Cmd {
 func (m *Model) handleDocContent(msg docContentMsg) (tea.Model, tea.Cmd) {
 	m.readFiles[msg.url] = msg.content
 	m.autoScroll = true
+	m.filesPending--
 
 	if m.sessionLog != nil {
 		m.sessionLog.Log("Fetched %s (%d chars)", msg.url, len(msg.content))
@@ -360,8 +362,7 @@ func (m *Model) handleDocContent(msg docContentMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) remainingFetching() (tea.Model, tea.Cmd) {
-	remaining := len(m.pendingReads) - len(m.readFiles)
-	if remaining > 0 {
+	if m.filesPending > 0 {
 		return m, nil
 	}
 

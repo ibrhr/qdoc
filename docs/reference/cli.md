@@ -16,6 +16,7 @@ qdoc python "asyncio vs threading"
 qdoc fastapi "dependency injection patterns"
 qdoc react "useCallback dependencies"
 qdoc nextjs "server components vs client components"
+qdoc pydantic "BaseModel field validators"
 qdoc ./docs "deployment guide"
 qdoc --json go "generics" | jq '.answer'
 ```

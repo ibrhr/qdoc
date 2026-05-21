@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ibrhr/qdoc/internal/retry"
 )
 
 const maxContentChars = 12000
@@ -32,6 +32,113 @@ type Source struct {
 }
 
 var KnownSources = []Source{
+	{
+		Name:       "pydantic",
+		BaseURL:    "https://pydantic.dev/docs/validation/latest",
+		IndexURL:   "https://pydantic.dev/docs/validation/latest/get-started/",
+		LinkPrefix: "/docs/validation/latest/",
+		SystemPrompt: `Pydantic documentation is at https://pydantic.dev/docs/validation/latest. All URLs in the file list below are complete — use them as-is.
+
+Pydantic is a Python data validation library (v2). The docs live under /docs/validation/latest/.
+
+Where things live:
+
+  get-started/                  — Getting started
+    get-started/                  Welcome — overview, examples, who uses Pydantic
+    get-started/why/              Why Pydantic — type hints, speed, JSON Schema, strict/lax, ecosystem
+    get-started/install/          Installation
+    get-started/migration/        Migration Guide — V1 to V2 breaking changes (BaseModel, Field,
+                                  validators, config, types, JSON schema, GenericModel, dataclasses)
+    get-started/version-policy/   Version policy
+    get-started/contributing/     Contributing guide
+    get-started/changelog/        Changelog
+
+  concepts/                     — User guide — where most "how do I" answers live
+    concepts/models/              Models (BaseModel, data conversion, extra data, nested models,
+                                  generic models, RootModel, dynamic creation, immutability,
+                                  model_copy, model_validate, model_dump, model_construct)
+    concepts/fields/              Fields (Field(), Annotated pattern, default values, aliases,
+                                  constraints, strict, frozen, exclude, deprecated, computed_field,
+                                  discriminator, validate_default)
+    concepts/validators/          Validators (field: after/before/plain/wrap; model: after/before/wrap;
+                                  ValidationInfo, validation context, raising errors)
+    concepts/serialization/       Serialization (model_dump, model_dump_json, custom serializers,
+                                  field_serializer, model_serializer, computed_field, include/exclude)
+    concepts/types/               Types (standard lib types, pydantic types, constrained types,
+                                  custom types with __get_pydantic_core_schema__)
+    concepts/unions/              Unions (discriminated unions, Tag, union modes: smart/left_to_right)
+    concepts/alias/               Aliases (alias, validation_alias, serialization_alias, alias_generator)
+    concepts/config/              Configuration (ConfigDict — all options: extra, frozen, strict,
+                                  from_attributes, validate_default, str_max_length, etc.)
+    concepts/json_schema/         JSON Schema (generation, field-level/model-level customization)
+    concepts/json/                JSON (parsing, serialization, JSON mode vs Python mode validation)
+    concepts/dataclasses/         Dataclasses (pydantic dataclasses, stdlib dataclasses, config)
+    concepts/forward_annotations/ Forward annotations, self-referencing/recursive models, model_rebuild
+    concepts/strict_mode/         Strict mode (strict vs lax, per-field, per-call, per-model)
+    concepts/type_adapter/        TypeAdapter — validate non-BaseModel types (replaces parse_obj_as)
+    concepts/validation_decorator/ validate_call — validate function arguments (replaces validate_arguments)
+    concepts/conversion_table/    Conversion table — all type coercion rules
+    concepts/pydantic_settings/   Settings management (pydantic-settings, BaseSettings, env vars, .env)
+    concepts/performance/         Performance tips (Sequence vs list, model_validate vs construct)
+    concepts/experimental/        Experimental features
+
+  api/                          — API reference
+    api/pydantic/base_model/      BaseModel (all methods and attributes)
+    api/pydantic/root_model/      RootModel
+    api/pydantic/dataclasses/     Pydantic dataclass decorator
+    api/pydantic/type_adapter/    TypeAdapter
+    api/pydantic/validate_call/   validate_call decorator
+    api/pydantic/fields/          Field(), FieldInfo, computed_field decorator
+    api/pydantic/aliases/         Alias-related types
+    api/pydantic/config/          ConfigDict — all config options documented
+    api/pydantic/json_schema/     GenerateJsonSchema, JSON schema utilities
+    api/pydantic/errors/          Error types
+    api/pydantic/functional_validators/  AfterValidator, BeforeValidator, WrapValidator, PlainValidator, field_validator, model_validator
+    api/pydantic/functional_serializers/ field_serializer, model_serializer
+    api/pydantic/standard_library_types/ Standard library type behaviors and constraints
+    api/pydantic/types/           Pydantic-specific types (EmailStr, UrlConstraints, etc.)
+    api/pydantic/networks/        Network types (AnyUrl, HttpUrl, FileUrl, etc.)
+    api/pydantic/version/         Version info
+    api/pydantic/annotated_handlers/  GetCoreSchemaHandler, GetJsonSchemaHandler
+    api/pydantic/experimental/    Experimental API
+    api/pydantic-core/pydantic_core/  SchemaValidator, SchemaSerializer, ValidationError, PydanticCustomError
+    api/pydantic-core/pydantic_core_schema/  Core schema TypedDict definitions
+    api/pydantic_settings/        Pydantic Settings (BaseSettings, SettingsConfigDict)
+    api/pydantic-extra-types/     Extra types: Color, Country, Payment, PhoneNumbers, Coordinate,
+                                  MacAddress, ISBN, Pendulum, CurrencyCode, LanguageCode, ULID, etc.
+
+  internals/                    — Internals (targeted at contributors)
+    internals/architecture/       pydantic vs pydantic-core, core schema, validation/serialization pipeline
+    internals/resolving_annotations/  Annotation resolution process
+
+  examples/                     — Real-world usage examples
+    examples/files/               Validating JSON, JSONL, CSV, TOML, YAML, XML, INI data
+    examples/requests/            Web and API request validation
+    examples/queues/              Queue data validation
+    examples/orms/                Database/ORM integration (SQLAlchemy)
+    examples/custom_validators/   Custom validator patterns
+    examples/dynamic_models/      Dynamic model creation
+    examples/pydantic_ai/         Pydantic AI agent integration
+
+  errors/                       — Error handling
+    errors/errors/                ValidationError, ErrorDetails, customizing error messages
+    errors/validation_errors/     All validation error types
+    errors/usage_errors/          All usage error types
+
+  integrations/                 — Tool and platform integrations
+    integrations/llms/            llms.txt and llms-full.txt for LLM consumption
+    integrations/dev-tools/mypy/  Mypy plugin
+    integrations/dev-tools/pyrefly/  Pyrefly type checker
+    integrations/dev-tools/visual_studio_code/  VSCode integration
+    integrations/dev-tools/datamodel_code_generator/  Code generation from JSON Schema
+    integrations/dev-tools/rich/  Rich console integration
+    integrations/dev-tools/linting/  Linting
+    integrations/aws_lambda/      AWS Lambda integration
+
+For "how do I create/use/configure a model" questions, start with concepts/models/ and concepts/fields/. For validation logic, see concepts/validators/. For serialization/export, see concepts/serialization/. For specific class/method signatures, see api/pydantic/. For V1 to V2 migration, see get-started/migration/. For file format validation, see examples/files/. For configuration options, see concepts/config/ or api/pydantic/config/.
+
+Pick the most relevant pages and read them. Use the full URLs from the list below.`,
+	},
 	{
 		Name:       "go",
 		BaseURL:    "https://go.dev/doc",
@@ -551,35 +658,15 @@ func fetchLocal(rawURL string) (*http.Response, error) {
 	}, nil
 }
 
-type retryConfig struct {
-	maxAttempts int
-	baseDelay   time.Duration
-	maxDelay    time.Duration
-}
-
-func backoffDelay(rc retryConfig, attempt int) time.Duration {
-	delay := time.Duration(float64(rc.baseDelay) * math.Pow(2, float64(attempt)))
-	if delay > rc.maxDelay {
-		delay = rc.maxDelay
-	}
-	return delay + time.Duration(float64(delay)*0.3*rand.Float64())
-}
-
-var fetchRetry = retryConfig{
-	maxAttempts: 3,
-	baseDelay:   1 * time.Second,
-	maxDelay:    10 * time.Second,
-}
-
 func retryableHTTPGet(rawURL string) (*http.Response, error) {
 	if strings.HasPrefix(rawURL, "file://") {
 		return fetchLocal(rawURL)
 	}
 
 	var lastErr error
-	for attempt := 0; attempt < fetchRetry.maxAttempts; attempt++ {
+	for attempt := 0; attempt < retry.FetchRetry.MaxAttempts; attempt++ {
 		if attempt > 0 {
-			time.Sleep(backoffDelay(fetchRetry, attempt-1))
+			time.Sleep(retry.BackoffDelay(retry.FetchRetry, attempt-1))
 		}
 
 		resp, err := http.Get(rawURL)
@@ -599,8 +686,14 @@ func retryableHTTPGet(rawURL string) (*http.Response, error) {
 			return nil, fmt.Errorf("not found: %s", rawURL)
 		}
 
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden ||
+			resp.StatusCode == http.StatusBadRequest {
+			resp.Body.Close()
+			return nil, fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, rawURL)
+		}
+
 		return resp, nil
 	}
 
-	return nil, fmt.Errorf("fetch retry exhausted (%d attempts): %w", fetchRetry.maxAttempts, lastErr)
+	return nil, fmt.Errorf("fetch retry exhausted (%d attempts): %w", retry.FetchRetry.MaxAttempts, lastErr)
 }
