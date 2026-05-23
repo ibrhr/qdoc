@@ -607,13 +607,14 @@ func (s Source) fetchLocalIndex() ([]Entry, error) {
 			return nil
 		}
 		rel, _ := filepath.Rel(rootDir, path)
-		if seen[rel] {
+		relSlash := filepath.ToSlash(rel)
+		if seen[relSlash] {
 			return nil
 		}
-		seen[rel] = true
-		title := strings.TrimSuffix(strings.TrimSuffix(rel, ext), "/index")
+		seen[relSlash] = true
+		title := strings.TrimSuffix(strings.TrimSuffix(relSlash, ext), "/index")
 		title = strings.ReplaceAll(title, "/", " / ")
-		entries = append(entries, Entry{URL: rel, Title: title})
+		entries = append(entries, Entry{URL: relSlash, Title: title})
 		return nil
 	})
 
