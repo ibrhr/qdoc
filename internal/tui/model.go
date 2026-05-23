@@ -120,9 +120,11 @@ type Model struct {
 	mode      modeType
 	setupStep setupStep
 
-	authMethod auth.AuthMethod
-	authStore  *auth.TokenStore
-	authStatus auth.AuthStatus
+	authMethod   auth.AuthMethod
+	authStore    *auth.TokenStore
+	authStatus   auth.AuthStatus
+	authDeviceURI string
+	authUserCode  string
 
 	cursor         int
 	inputBuffer    string

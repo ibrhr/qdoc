@@ -190,6 +190,8 @@ func (m *Model) initDeviceAuthForMethod(am auth.AuthMethod, prov provider.Provid
 
 	m.setupStep = stepDeviceAuth
 	m.authStatus = auth.AuthStatus{}
+	m.authDeviceURI = ""
+	m.authUserCode = ""
 	return m, startDeviceAuthForMethod(am, prov, method)
 }
 
@@ -213,6 +215,8 @@ func (m *Model) initDeviceAuth(am auth.AuthMethod, prov provider.Provider) (tea.
 
 	m.setupStep = stepDeviceAuth
 	m.authStatus = auth.AuthStatus{}
+	m.authDeviceURI = ""
+	m.authUserCode = ""
 	return m, startDeviceAuthForMethod(am, prov, provider.AccessMethod{})
 }
 
@@ -242,6 +246,8 @@ func (m *Model) initPkceAuth(am auth.AuthMethod, prov provider.Provider, method 
 
 	m.setupStep = stepPkceAuth
 	m.authStatus = auth.AuthStatus{}
+	m.authDeviceURI = ""
+	m.authUserCode = ""
 	return m, startPkceAuth(am, prov, method)
 }
 
@@ -656,6 +662,15 @@ func readAuthStatus(ch <-chan auth.AuthStatus) tea.Cmd {
 }
 
 func (m *Model) handleDeviceAuth(msg authStatusMsg) (tea.Model, tea.Cmd) {
+	if msg.Status.Stage == auth.StageAwaitingUser {
+		if msg.Status.VerificationURI != "" {
+			m.authDeviceURI = msg.Status.VerificationURI
+		}
+		if msg.Status.UserCode != "" {
+			m.authUserCode = msg.Status.UserCode
+		}
+	}
+
 	m.authStatus = msg.Status
 
 	switch msg.Status.Stage {
@@ -691,12 +706,18 @@ func (m *Model) handleDeviceAuth(msg authStatusMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handlePkceAuth(msg authStatusMsg) (tea.Model, tea.Cmd) {
+	if msg.Status.Stage == auth.StageAwaitingUser {
+		if msg.Status.VerificationURI != "" {
+			m.authDeviceURI = msg.Status.VerificationURI
+		}
+	}
+
 	m.authStatus = msg.Status
 
 	switch msg.Status.Stage {
 	case auth.StageAwaitingUser:
-		if msg.Status.VerificationURI != "" {
-			openBrowser(msg.Status.VerificationURI)
+		if m.authDeviceURI != "" {
+			openBrowser(m.authDeviceURI)
 		}
 		return m, readAuthStatus(msg.Ch)
 
@@ -752,12 +773,12 @@ func (m Model) renderDeviceAuth() string {
 
 	switch m.authStatus.Stage {
 	case auth.StageAwaitingUser, auth.StagePolling:
-		if m.authStatus.VerificationURI != "" {
-			sb.WriteString(dimStyle.Render(fmt.Sprintf("  1. Visit: %s", m.authStatus.VerificationURI)))
+		if m.authDeviceURI != "" {
+			sb.WriteString(dimStyle.Render(fmt.Sprintf("  1. Visit: %s", m.authDeviceURI)))
 			sb.WriteString("\n")
 		}
-		if m.authStatus.UserCode != "" {
-			sb.WriteString(fmt.Sprintf("  2. Enter code: %s", sectionStyle.Render(m.authStatus.UserCode)))
+		if m.authUserCode != "" {
+			sb.WriteString(fmt.Sprintf("  2. Enter code: %s", sectionStyle.Render(m.authUserCode)))
 			sb.WriteString("\n")
 		}
 		sb.WriteString("\n")
@@ -793,10 +814,10 @@ func (m Model) renderPkceAuth() string {
 	case auth.StageAwaitingUser, auth.StagePolling:
 		sb.WriteString(dimStyle.Render("  A browser window should open for you to sign in."))
 		sb.WriteString("\n")
-		if m.authStatus.VerificationURI != "" {
+		if m.authDeviceURI != "" {
 			sb.WriteString(dimStyle.Render("  If not, visit:"))
 			sb.WriteString("\n")
-			sb.WriteString(dimStyle.Render(fmt.Sprintf("  %s", m.authStatus.VerificationURI)))
+			sb.WriteString(dimStyle.Render(fmt.Sprintf("  %s", m.authDeviceURI)))
 			sb.WriteString("\n")
 		}
 		sb.WriteString("\n")
