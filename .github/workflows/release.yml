@@ -72,10 +72,10 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
-          $env:PATH += ";$(go env GOPATH)\bin"
+          $gopath = go env GOPATH
           $VERSION = $env:GITHUB_REF -replace '^refs/tags/v', ''
           $COMMIT = git rev-parse --short HEAD
-          goversioninfo -product-version="$VERSION" -file-version="$VERSION" -arch=${{ matrix.goarch }} -o resource_windows.syso versioninfo.json
+          & $gopath\bin\goversioninfo -product-version="$VERSION" -file-version="$VERSION" -arch=${{ matrix.goarch }} -o resource_windows.syso versioninfo.json
           go build `
             -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -s -w" `
             -o dist/qdoc.exe `
