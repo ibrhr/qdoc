@@ -2,10 +2,14 @@ const { execSync } = require("child_process");
 const { existsSync, renameSync, mkdirSync, rmSync, writeFileSync } = require("fs");
 const { join } = require("path");
 const crypto = require("crypto");
+const http = require("http");
 const https = require("https");
 
 const REPO = "ibrhr/qdoc";
 const VERSION = require("./package.json").version;
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
 
 function mapPlatform() {
   const goos = { linux: "linux", darwin: "darwin", win32: "windows" }[process.platform];
@@ -14,22 +18,44 @@ function mapPlatform() {
   return `${goos}_${goarch}`;
 }
 
-function fetch(url) {
+function fetchWithRetry(url, redirects = 0) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const mod = url.startsWith("https:") ? https : http;
+
+    const req = mod.get(url, { headers: { "User-Agent": "qdoc-installer" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        https.get(res.headers.location, (rr) => {
-          const c = []; rr.on("data", (d) => c.push(d));
-          rr.on("end", () => resolve(Buffer.concat(c)));
-          rr.on("error", reject);
-        });
-        return;
+        if (redirects > 5) return reject(new Error("too many redirects"));
+        return resolve(fetchWithRetry(res.headers.location, redirects + 1));
       }
-      const c = []; res.on("data", (d) => c.push(d));
-      res.on("end", () => resolve(Buffer.concat(c)));
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      const chunks = [];
+      res.on("data", (d) => chunks.push(d));
+      res.on("end", () => resolve(Buffer.concat(chunks)));
       res.on("error", reject);
-    }).on("error", reject);
+    });
+    req.on("error", reject);
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error("request timeout")); });
   });
+}
+
+async function fetch(url) {
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fetchWithRetry(url);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1) * (0.7 + Math.random() * 0.6);
+        process.stderr.write(`qdoc: download failed (attempt ${attempt}/${MAX_RETRIES}): ${err.message}, retrying in ${(delay / 1000).toFixed(1)}s\n`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 async function main() {
@@ -53,7 +79,8 @@ async function main() {
   process.stderr.write(`qdoc: downloading ${url}\n`);
   const buf = await fetch(url);
 
-  const archiveName = `qdoc_${platform}.${process.platform === "win32" ? "zip" : "tar.gz"}`;
+  const archiveExt = process.platform === "win32" ? "zip" : "tar.gz";
+  const archiveName = `qdoc_${platform}.${archiveExt}`;
   process.stderr.write(`qdoc: verifying checksum\n`);
   const checksumUrl = `https://github.com/${REPO}/releases/download/${tag}/checksums.txt`;
   const checksumBuf = await fetch(checksumUrl);
@@ -70,10 +97,8 @@ async function main() {
   try {
     if (process.platform === "win32") {
       writeFileSync(join(tmp, "qdoc.zip"), buf);
-      const zipPath = join(tmp, "qdoc.zip").replace(/'/g, "''");
-      const destPath = tmp.replace(/'/g, "''");
       try {
-        execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force"`, { stdio: "ignore" });
+        execSync(`powershell -Command "Expand-Archive -Path '${join(tmp, "qdoc.zip")}' -DestinationPath '${tmp}' -Force"`, { stdio: "ignore" });
       } catch (_) {
         execSync(`tar -xf qdoc.zip`, { cwd: tmp, stdio: "ignore" });
       }
@@ -92,6 +117,9 @@ async function main() {
   if (process.platform !== "win32") {
     execSync(`chmod +x "${dest}"`, { stdio: "ignore" });
   }
+
+  const out = execSync(`"${dest}" --version`, { encoding: "utf-8" }).trim();
+  process.stderr.write(`qdoc: installed ${out}\n`);
 }
 
 main().catch((err) => {

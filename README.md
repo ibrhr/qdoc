@@ -13,14 +13,11 @@ Because when you let your main coding agent search for something on the internet
 ## Quick start
 
 ```bash
-# Linux, macOS (shell)
 curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
+```
 
-# Any platform (npm)
+```bash
 npm install -g qdoc-agent
-
-# Or pin a specific version
-npm install -g qdoc-agent@0.1.5
 ```
 
 ```bash

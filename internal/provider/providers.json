@@ -3,6 +3,8 @@
     "name": "openai",
     "base_url": "https://api.openai.com/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
+    "auth_types": ["api_key", "oauth_pkce"],
     "env_key": "OPENAI_API_KEY",
     "default_model": "gpt-5.5",
     "description": "OpenAI — gpt-5.5, gpt-5.4-mini, etc.",
@@ -12,6 +14,7 @@
     "name": "deepseek",
     "base_url": "https://api.deepseek.com/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "DEEPSEEK_API_KEY",
     "default_model": "deepseek-v4-flash",
     "description": "DeepSeek — deepseek-v4-flash, deepseek-v4-pro",
@@ -21,6 +24,7 @@
     "name": "opencode-zen",
     "base_url": "https://opencode.ai/zen/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "OPENCODE_ZEN_API_KEY",
     "default_model": "gpt-5.4-mini",
     "description": "OpenCode Zen — curated models tested for coding",
@@ -44,6 +48,7 @@
     "name": "opencode-go",
     "base_url": "https://opencode.ai/zen/go/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "OPENCODE_GO_API_KEY",
     "default_model": "deepseek-v4-flash",
     "description": "OpenCode Go — low cost subscription for open coding models",
@@ -60,6 +65,7 @@
     "name": "xai",
     "base_url": "https://api.x.ai/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "XAI_API_KEY",
     "default_model": "grok-4.3",
     "description": "xAI Grok — grok-4.3, grok-4.20 reasoning",
@@ -73,6 +79,7 @@
     "name": "alibaba",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "DASHSCOPE_API_KEY",
     "default_model": "qwen3.6-plus",
     "description": "Alibaba DashScope — Qwen models",
@@ -87,6 +94,7 @@
     "name": "google",
     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "GEMINI_API_KEY",
     "default_model": "gemini-3.1-pro",
     "description": "Google Gemini — gemini-3.1-pro, gemini-3-flash",
@@ -101,6 +109,7 @@
     "name": "zhipu",
     "base_url": "https://open.bigmodel.cn/api/paas/v4",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "ZAI_API_KEY",
     "default_model": "glm-5.1",
     "description": "Zhipu AI (z.ai) — GLM series models",
@@ -117,12 +126,32 @@
     "name": "moonshot",
     "base_url": "https://api.moonshot.cn/v1",
     "api_type": "openai-compat",
+    "auth_type": "api_key",
     "env_key": "MOONSHOT_API_KEY",
     "default_model": "kimi-k2.6",
     "description": "Moonshot AI — Kimi K2 series models",
     "models": [
       "kimi-k2.6",
       "kimi-k2.5"
+    ]
+  },
+  {
+    "name": "github-copilot",
+    "base_url": "https://api.individual.githubcopilot.com/v1",
+    "api_type": "openai-compat",
+    "auth_type": "oauth_device",
+    "oauth_config": {
+      "device_auth_url": "https://github.com/login/device/code",
+      "token_url": "https://github.com/login/oauth/access_token",
+      "scope": "read:user"
+    },
+    "env_key": "GITHUB_COPILOT_TOKEN",
+    "default_model": "gpt-5.4-mini",
+    "description": "GitHub Copilot — use your Copilot subscription (Pro/Business)",
+    "models": [
+      "gpt-5.5", "gpt-5.4", "gpt-5.4-mini",
+      "claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7",
+      "gemini-3-flash", "gemini-2.5-pro"
     ]
   }
 ]

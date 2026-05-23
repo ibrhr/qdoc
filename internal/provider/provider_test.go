@@ -253,22 +253,24 @@ func TestErrNoProvider_Error(t *testing.T) {
 }
 
 func TestProvidersLoadedFromJSON(t *testing.T) {
-	if len(Providers) < 9 {
-		t.Fatalf("expected at least 9 providers from embedded JSON, got %d", len(Providers))
+	if len(Providers) < 10 {
+		t.Fatalf("expected at least 10 providers from embedded JSON, got %d", len(Providers))
 	}
 
 	tests := []struct {
 		name     string
 		apiType  string
+		authType string
 		wantKey  string
 	}{
-		{"openai", "openai-compat", "OPENAI_API_KEY"},
-		{"deepseek", "openai-compat", "DEEPSEEK_API_KEY"},
-		{"xai", "openai-compat", "XAI_API_KEY"},
-		{"alibaba", "openai-compat", "DASHSCOPE_API_KEY"},
-		{"google", "openai-compat", "GEMINI_API_KEY"},
-		{"zhipu", "openai-compat", "ZAI_API_KEY"},
-		{"moonshot", "openai-compat", "MOONSHOT_API_KEY"},
+		{"openai", "openai-compat", "api_key", "OPENAI_API_KEY"},
+		{"deepseek", "openai-compat", "api_key", "DEEPSEEK_API_KEY"},
+		{"xai", "openai-compat", "api_key", "XAI_API_KEY"},
+		{"alibaba", "openai-compat", "api_key", "DASHSCOPE_API_KEY"},
+		{"google", "openai-compat", "api_key", "GEMINI_API_KEY"},
+		{"zhipu", "openai-compat", "api_key", "ZAI_API_KEY"},
+		{"moonshot", "openai-compat", "api_key", "MOONSHOT_API_KEY"},
+		{"github-copilot", "openai-compat", "oauth_device", "GITHUB_COPILOT_TOKEN"},
 	}
 
 	for _, tt := range tests {
@@ -283,6 +285,9 @@ func TestProvidersLoadedFromJSON(t *testing.T) {
 			if prov.EnvKey != tt.wantKey {
 				t.Errorf("EnvKey = %q, want %q", prov.EnvKey, tt.wantKey)
 			}
+			if got := prov.EffectiveAuthType(); got != tt.authType {
+				t.Errorf("EffectiveAuthType() = %q, want %q", got, tt.authType)
+			}
 			if prov.DefaultModel == "" {
 				t.Errorf("DefaultModel should not be empty for %s", tt.name)
 			}
@@ -290,6 +295,55 @@ func TestProvidersLoadedFromJSON(t *testing.T) {
 				t.Errorf("Models should not be empty for %s", tt.name)
 			}
 		})
+	}
+}
+
+func TestProviderDefaultsToAPIKey(t *testing.T) {
+	prov := Provider{}
+	if got := prov.EffectiveAuthType(); got != "api_key" {
+		t.Errorf("empty AuthType should default to api_key, got %q", got)
+	}
+	if prov.HasMultipleAuthOptions() {
+		t.Error("provider with no auth_types should not have multiple options")
+	}
+}
+
+func TestProviderMultipleAuthOptions(t *testing.T) {
+	prov := Provider{AuthTypes: []string{"api_key", "oauth_pkce"}}
+	if !prov.HasMultipleAuthOptions() {
+		t.Error("provider with 2 auth_types should have multiple options")
+	}
+}
+
+func TestGitHubCopilotOAuthConfig(t *testing.T) {
+	prov, found := Find("github-copilot")
+	if !found {
+		t.Fatal("github-copilot not found")
+	}
+	if prov.AuthType != "oauth_device" {
+		t.Errorf("AuthType = %q, want %q", prov.AuthType, "oauth_device")
+	}
+	if prov.OAuthConfig == nil {
+		t.Fatal("OAuthConfig should not be nil for oauth_device provider")
+	}
+	if prov.OAuthConfig.DeviceAuthURL == "" {
+		t.Error("DeviceAuthURL should not be empty")
+	}
+	if prov.OAuthConfig.TokenURL == "" {
+		t.Error("TokenURL should not be empty")
+	}
+	if prov.OAuthConfig.Scope == "" {
+		t.Error("Scope should not be empty")
+	}
+}
+
+func TestOpenAIMultipleAuthTypes(t *testing.T) {
+	prov, found := Find("openai")
+	if !found {
+		t.Fatal("openai not found")
+	}
+	if !prov.HasMultipleAuthOptions() {
+		t.Error("openai should have multiple auth options (api_key + oauth_pkce)")
 	}
 }
 

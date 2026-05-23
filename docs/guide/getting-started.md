@@ -12,9 +12,12 @@ Not sure why you need qdoc? See [Why qdoc](/guide/why).
 ## Quick Start
 
 ```bash
-# Install (choose one)
 curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
+```
+
+```bash
 npm install -g qdoc-agent
+```
 
 # Set your API key (prompts securely, input hidden)
 qdoc set key openai

@@ -253,7 +253,7 @@ Emptied keys/models maps are re-initialized to non-nil on load.
 
 ## Install script
 
-`docs/public/install.sh` — POSIX bootstrap re-execs with bash if needed. Installs binary to `~/.qdoc/bin`, adds to shell config. Options: `--version`, `--no-modify-path`.
+`docs/public/install.sh` — POSIX bootstrap re-execs with bash if needed. Installs binary to `~/.qdoc/bin`, adds to shell config. Supports Linux, macOS, and Windows (WSL, Git Bash, MSYS2, Cygwin). Options: `--version`, `--no-modify-path`.
 
 ## npm package
 

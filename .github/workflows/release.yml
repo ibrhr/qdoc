@@ -8,15 +8,12 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-unix:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, darwin]
         goarch: [amd64, arm64]
-        exclude:
-          - goos: windows
-            goarch: arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -33,12 +30,9 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           COMMIT=$(git rev-parse --short HEAD)
-          EXT=""
-          if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-
           go build \
             -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -s -w" \
-            -o dist/qdoc${EXT} \
+            -o dist/qdoc \
             .
 
       - name: Smoke test (linux)
@@ -47,17 +41,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           ./dist/qdoc --version | grep -q "$VERSION"
 
-      - name: Package (unix)
-        if: matrix.goos != 'windows'
+      - name: Package
         run: |
           cd dist
           tar czf qdoc_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz qdoc
-
-      - name: Package (windows)
-        if: matrix.goos == 'windows'
-        run: |
-          cd dist
-          zip qdoc_windows_${{ matrix.goarch }}.zip qdoc.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -65,10 +52,60 @@ jobs:
           name: qdoc-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             dist/*.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Build
+        env:
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+          $VERSION = $env:GITHUB_REF -replace '^refs/tags/v', ''
+          $COMMIT = git rev-parse --short HEAD
+          goversioninfo -product-version="$VERSION" -file-version="$VERSION" -arch=${{ matrix.goarch }} -o resource_windows.syso versioninfo.json
+          go build `
+            -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -s -w" `
+            -o dist/qdoc.exe `
+            .
+
+      - name: Smoke test
+        if: matrix.goarch == 'amd64'
+        run: |
+          $VERSION = $env:GITHUB_REF -replace '^refs/tags/v', ''
+          $out = & ./dist/qdoc.exe --version
+          if ($out -notmatch $VERSION) {
+            Write-Error "Version mismatch: expected $VERSION, got $out"
+            exit 1
+          }
+          Write-Host "Smoke test passed: $out"
+
+      - name: Package
+        run: |
+          $ARCH = "${{ matrix.goarch }}"
+          cd dist
+          Compress-Archive -Path qdoc.exe -DestinationPath qdoc_windows_$ARCH.zip
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qdoc-windows-${{ matrix.goarch }}
+          path: |
             dist/*.zip
 
   release:
-    needs: build
+    needs: [build-unix, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

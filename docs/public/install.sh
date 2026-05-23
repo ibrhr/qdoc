@@ -58,8 +58,23 @@ done
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
-    linux|darwin) ;;
-    *) echo -e "${RED}Unsupported OS: $(uname -s)${NC}" >&2; exit 1 ;;
+    linux)
+        is_windows=false
+        ext=".tar.gz"
+        ;;
+    darwin)
+        is_windows=false
+        ext=".tar.gz"
+        ;;
+    mingw*|msys*|cygwin*)
+        is_windows=true
+        ext=".zip"
+        ;;
+    *)
+        echo -e "${RED}Unsupported OS: $(uname -s)${NC}" >&2
+        echo -e "${MUTED}See https://github.com/ibrhr/qdoc/releases for manual download${NC}" >&2
+        exit 1
+        ;;
 esac
 
 arch=$(uname -m)
@@ -70,7 +85,12 @@ case "$arch" in
 esac
 
 combo="${os}_${arch}"
-ext=".tar.gz"
+# Normalize OS for the download URL (mingw64_nt → windows, msys_nt → windows)
+download_os="$os"
+if $is_windows; then
+    download_os="windows"
+    combo="windows_${arch}"
+fi
 
 # ── version resolution ───────────────────────────────────────────────
 
@@ -94,6 +114,12 @@ fi
 
 # ── version check ────────────────────────────────────────────────────
 
+if $is_windows; then
+    app_bin="$APP.exe"
+else
+    app_bin="$APP"
+fi
+
 if command -v "$APP" >/dev/null 2>&1; then
     installed=$("$APP" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
     if [ "$installed" = "$specific_version" ]; then
@@ -112,9 +138,15 @@ trap 'rm -rf "$tmp"' EXIT
 echo -e "${MUTED}Downloading ${NC}$APP ${BOLD}$specific_version${NC} ${MUTED}($combo)${NC}"
 
 if [ -t 2 ]; then
-    curl -# -fL -o "$tmp/$APP$ext" "$url"
+    curl -# -fL -o "$tmp/$APP$ext" "$url" || {
+        echo -e "${RED}Download failed${NC}" >&2
+        exit 1
+    }
 else
-    curl -sfL -o "$tmp/$APP$ext" "$url"
+    curl -sfL -o "$tmp/$APP$ext" "$url" || {
+        echo -e "${RED}Download failed${NC}" >&2
+        exit 1
+    }
 fi
 
 # ── checksum verification ────────────────────────────────────────────
@@ -122,8 +154,24 @@ fi
 checksum_url="https://github.com/$REPO/releases/download/$tag/checksums.txt"
 curl -sfL -o "$tmp/checksums.txt" "$checksum_url"
 archive_name=$(basename "$url")
+
+if $is_windows; then
+    # sha256sum is not available on Git Bash by default; fall back to openssl
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$tmp/$APP$ext" | awk '{print $1}')
+    elif command -v openssl >/dev/null 2>&1; then
+        actual=$(openssl dgst -sha256 "$tmp/$APP$ext" | awk '{print $NF}')
+    elif command -v certutil >/dev/null 2>&1; then
+        actual=$(certutil -hashfile "$tmp/$APP$ext" SHA256 | tail -n +2 | head -n 1 | tr -d '[:space:]')
+    else
+        echo -e "${RED}No sha256 tool found${NC}" >&2
+        exit 1
+    fi
+else
+    actual=$(sha256sum "$tmp/$APP$ext" | awk '{print $1}')
+fi
+
 expected=$(grep -F "$archive_name" "$tmp/checksums.txt" | awk '{print $1}')
-actual=$(sha256sum "$tmp/$APP$ext" | awk '{print $1}')
 if [ "$expected" != "$actual" ] || [ -z "$expected" ]; then
     echo -e "${RED}Checksum verification failed for $archive_name${NC}" >&2
     rm -rf "$tmp"
@@ -133,24 +181,37 @@ echo -e "${MUTED}Checksum verified${NC}"
 
 # ── extract & install ────────────────────────────────────────────────
 
-tar xzf "$tmp/$APP$ext" -C "$tmp"
+if $is_windows; then
+    if command -v unzip >/dev/null 2>&1; then
+        unzip -qo "$tmp/$APP$ext" -d "$tmp"
+    elif command -v tar >/dev/null 2>&1; then
+        # Windows 10 build 1803+ has built-in tar
+        tar -xf "$tmp/$APP$ext" -C "$tmp"
+    else
+        echo -e "${RED}No extraction tool found (need unzip or tar)${NC}" >&2
+        exit 1
+    fi
+else
+    tar xzf "$tmp/$APP$ext" -C "$tmp"
+fi
+
 mkdir -p "$INSTALL_DIR"
 
-if [ -f "$tmp/$APP" ]; then
-    mv "$tmp/$APP" "$INSTALL_DIR/$APP"
-elif [ -f "$tmp/$APP.exe" ]; then
-    mv "$tmp/$APP.exe" "$INSTALL_DIR/$APP.exe"
+if [ -f "$tmp/$app_bin" ]; then
+    mv "$tmp/$app_bin" "$INSTALL_DIR/$app_bin"
 else
     echo -e "${RED}Binary not found in archive${NC}" >&2
     exit 1
 fi
 
-chmod +x "$INSTALL_DIR/$APP"
+if ! $is_windows; then
+    chmod +x "$INSTALL_DIR/$app_bin"
+fi
 
-installed_ver=$("$INSTALL_DIR/$APP" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+installed_ver=$("$INSTALL_DIR/$app_bin" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
 if [ "$installed_ver" != "$specific_version" ]; then
     echo -e "${RED}Version mismatch: expected $specific_version, got ${installed_ver:-none}${NC}" >&2
-    rm -f "$INSTALL_DIR/$APP"
+    rm -f "$INSTALL_DIR/$app_bin"
     exit 1
 fi
 
@@ -188,9 +249,13 @@ maybe_add_path() {
             add_to_path "$f" "export PATH=\"$INSTALL_DIR:\$PATH\""
             ;;
         bash)
-            local f="$HOME/.bash_profile"
-            [ ! -f "$f" ] && f="$HOME/.bashrc"
-            [ ! -f "$f" ] && f="$HOME/.profile"
+            if $is_windows; then
+                local f="$HOME/.bashrc"
+            else
+                local f="$HOME/.bash_profile"
+                [ ! -f "$f" ] && f="$HOME/.bashrc"
+                [ ! -f "$f" ] && f="$HOME/.profile"
+            fi
             add_to_path "$f" "export PATH=\"$INSTALL_DIR:\$PATH\""
             ;;
         *)
@@ -216,7 +281,7 @@ echo ""
 echo -e "  ${GREEN}▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄${NC}"
 echo -e "  ${GREEN}█  ▄  █ █  ▄▄ █ █  ▄▄ █${NC}"
 echo -e "  ${GREEN}█ █▄█ █ █ █▄█ █ █ █▄▄ ${NC}  ${BOLD}qdoc $specific_version${NC}"
-echo -e "  ${GREEN}█▄▄▄▄▄▄▄ █▄▄▄▄▄█ █▄▄▄█${NC}  ${MUTED}installed to${NC} $INSTALL_DIR/$APP"
+echo -e "  ${GREEN}█▄▄▄▄▄▄▄ █▄▄▄▄▄█ █▄▄▄█${NC}  ${MUTED}installed to${NC} $INSTALL_DIR/$app_bin"
 echo ""
 
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then

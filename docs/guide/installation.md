@@ -1,12 +1,14 @@
 # Installation
 
-## Shell script (Linux, macOS)
+## Shell script
 
 ```bash
 curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 ```
 
-Installs `qdoc` to `~/.qdoc/bin` (no root required). Adds the directory to your shell config automatically (`.bash_profile`, `.zshrc`, or `config.fish`).
+Installs `qdoc` to `~/.qdoc/bin` (no root required). Adds the directory to your shell config automatically.
+
+Works on Linux, macOS, and Windows (WSL, Git Bash, MSYS2, Cygwin).
 
 Options:
 
@@ -45,6 +47,7 @@ Pre-built binaries for all platforms:
 | macOS Intel | `qdoc_darwin_amd64.tar.gz` |
 | macOS Apple Silicon | `qdoc_darwin_arm64.tar.gz` |
 | Windows x86_64 | `qdoc_windows_amd64.zip` |
+| Windows arm64 | `qdoc_windows_arm64.zip` |
 
 Download from [GitHub Releases](https://github.com/ibrhr/qdoc/releases/latest):
 

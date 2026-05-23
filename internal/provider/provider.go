@@ -14,12 +14,34 @@ type Provider struct {
 	Name         string   `json:"name"`
 	BaseURL      string   `json:"base_url"`
 	APIType      string   `json:"api_type"`
-	EnvKey       string   `json:"env_key"`
+	AuthType     string   `json:"auth_type"`
+	AuthTypes    []string `json:"auth_types,omitempty"`
+	EnvKey       string   `json:"env_key,omitempty"`
 	DefaultModel string   `json:"default_model"`
 	Description  string   `json:"description"`
 	Models       []string `json:"models"`
 
-	Headers map[string]string `json:"headers,omitempty"`
+	Headers    map[string]string `json:"headers,omitempty"`
+	OAuthConfig *OAuthConfig      `json:"oauth_config,omitempty"`
+}
+
+type OAuthConfig struct {
+	DeviceAuthURL string `json:"device_auth_url,omitempty"`
+	TokenURL      string `json:"token_url,omitempty"`
+	AuthURL       string `json:"auth_url,omitempty"`
+	ClientID      string `json:"client_id,omitempty"`
+	Scope         string `json:"scope,omitempty"`
+}
+
+func (p Provider) EffectiveAuthType() string {
+	if p.AuthType != "" {
+		return p.AuthType
+	}
+	return "api_key"
+}
+
+func (p Provider) HasMultipleAuthOptions() bool {
+	return len(p.AuthTypes) > 1
 }
 
 //go:embed providers.json

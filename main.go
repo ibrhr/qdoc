@@ -1,5 +1,7 @@
 package main
 
+//go:generate goversioninfo -product-version=dev -file-version=dev -o resource_windows.syso versioninfo.json
+
 import (
 	"encoding/json"
 	"fmt"

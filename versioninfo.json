@@ -1,0 +1,38 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": {
+      "Major": 0,
+      "Minor": 1,
+      "Patch": 0,
+      "Build": 0
+    },
+    "ProductVersion": {
+      "Major": 0,
+      "Minor": 1,
+      "Patch": 0,
+      "Build": 0
+    },
+    "FileFlagsMask": "3f",
+    "FileFlags": "0",
+    "FileOS": "040004",
+    "FileType": "01",
+    "FileSubType": "0"
+  },
+  "StringFileInfo": {
+    "Comments": "qdoc - Query the Docs",
+    "CompanyName": "qdoc",
+    "FileDescription": "qdoc - Query the Docs. A tui/cli for fast, accurate, relevant, and up-to-date information about any library or framework.",
+    "FileVersion": "",
+    "InternalName": "qdoc.exe",
+    "LegalCopyright": "MIT License",
+    "OriginalFilename": "qdoc.exe",
+    "ProductName": "qdoc",
+    "ProductVersion": ""
+  },
+  "VarFileInfo": {
+    "Translation": {
+      "LangID": "0409",
+      "CharsetID": "04B0"
+    }
+  }
+}

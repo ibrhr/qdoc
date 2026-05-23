@@ -26,7 +26,7 @@ Activate this skill when:
 
 ## Rules
 
-1. **Verify Installation**: Before running a query, verify availability with `which qdoc`. If missing, install via `curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash` or `npm install -g qdoc-agent`. If installation fails, notify the user and stop.
+1. **Verify Installation**: Before running a query, verify availability with `which qdoc`. If missing, install via `curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash` or `npm install -g qdoc-agent`. On Windows, use WSL or Git Bash to run the install script. If installation fails, notify the user and stop.
 2. **Mandatory Flags**: The TUI is for humans. You MUST run headlessly using `--no-tui` or `--json`.
 3. **Execution Behavior**: `qdoc` executes multiple turns internally (up to 5 page fetches). Run the command and wait for the process to complete. Do not interrupt it.
 4. **Error Handling**: Always check exit codes. 0 = Success. 1 = Error. If the process fails due to a missing API key, instruct the user to run `qdoc set key <provider>`.
