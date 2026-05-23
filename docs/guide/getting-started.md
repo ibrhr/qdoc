@@ -11,23 +11,30 @@ Not sure why you need qdoc? See [Why qdoc](/guide/why).
 
 ## Quick Start
 
-```bash
+**Install** — pick one:
+
+::: code-group
+
+```bash [curl]
 curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash
 ```
 
-```bash
+```bash [npm]
 npm install -g qdoc-agent
 ```
 
-# Set your API key (prompts securely, input hidden)
-qdoc set key openai
+:::
 
-# Ask a question
+**Set your API key** (prompts securely, input hidden):
+
+```bash
+qdoc set key openai
+```
+
+**Ask a question**:
+
+```bash
 qdoc go "how do generics work?"
-qdoc python "typing Protocol vs ABC"
-qdoc fastapi "dependency injection patterns"
-qdoc react "useEffect cleanup"
-qdoc nextjs "app router layouts"
 ```
 
 That's it. qdoc fetches the Go documentation index, has the LLM pick relevant pages, reads them in parallel, and answers.
