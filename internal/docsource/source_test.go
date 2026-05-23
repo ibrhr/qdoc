@@ -67,8 +67,8 @@ func TestFetchIndex_Local(t *testing.T) {
 
 	source := Source{
 		Name:     filepath.Base(dir),
-		BaseURL:  "file://" + dir,
-		IndexURL: "file://" + dir,
+		BaseURL:  "file://" + filepath.ToSlash(dir),
+		IndexURL: "file://" + filepath.ToSlash(dir),
 		Local:    true,
 	}
 
@@ -102,8 +102,8 @@ func TestFetchContent_Local(t *testing.T) {
 
 	source := Source{
 		Name:     filepath.Base(dir),
-		BaseURL:  "file://" + dir,
-		IndexURL: "file://" + dir,
+		BaseURL:  "file://" + filepath.ToSlash(dir),
+		IndexURL: "file://" + filepath.ToSlash(dir),
 		Local:    true,
 	}
 
@@ -253,8 +253,8 @@ func TestFetchLocalIndex_SkipsHidden(t *testing.T) {
 
 	source := Source{
 		Name:     "test",
-		BaseURL:  "file://" + dir,
-		IndexURL: "file://" + dir,
+		BaseURL:  "file://" + filepath.ToSlash(dir),
+		IndexURL: "file://" + filepath.ToSlash(dir),
 		Local:    true,
 	}
 
@@ -277,8 +277,8 @@ func TestFetchContent_LocalTruncation(t *testing.T) {
 
 	source := Source{
 		Name:     "test",
-		BaseURL:  "file://" + dir,
-		IndexURL: "file://" + dir,
+		BaseURL:  "file://" + filepath.ToSlash(dir),
+		IndexURL: "file://" + filepath.ToSlash(dir),
 		Local:    true,
 	}
 
@@ -298,8 +298,8 @@ func TestFetchLocalIndex_SortedByURL(t *testing.T) {
 
 	source := Source{
 		Name:     "test",
-		BaseURL:  "file://" + dir,
-		IndexURL: "file://" + dir,
+		BaseURL:  "file://" + filepath.ToSlash(dir),
+		IndexURL: "file://" + filepath.ToSlash(dir),
 		Local:    true,
 	}
 

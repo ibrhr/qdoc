@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -523,8 +522,8 @@ func Find(name string) (Source, bool) {
 		abs, _ := filepath.Abs(name)
 		return Source{
 			Name:     filepath.Base(abs),
-			BaseURL:  "file://" + abs,
-			IndexURL: "file://" + abs,
+			BaseURL:  "file://" + filepath.ToSlash(abs),
+			IndexURL: "file://" + filepath.ToSlash(abs),
 			Local:    true,
 		}, true
 	}
@@ -578,9 +577,12 @@ func (s Source) FetchContent(rawURL string) (string, error) {
 	return content, nil
 }
 
+func sourceRootDir(rawURL string) string {
+	return filepath.FromSlash(strings.TrimPrefix(rawURL, "file://"))
+}
+
 func (s Source) fetchLocalIndex() ([]Entry, error) {
-	u, _ := url.Parse(s.IndexURL)
-	rootDir := filepath.Join(u.Host, u.Path)
+	rootDir := sourceRootDir(s.IndexURL)
 
 	var entries []Entry
 	seen := map[string]bool{}
@@ -626,8 +628,7 @@ func (s Source) fetchLocalIndex() ([]Entry, error) {
 }
 
 func (s Source) fetchLocalContent(path string) (string, error) {
-	u, _ := url.Parse(s.BaseURL)
-	rootDir := filepath.Join(u.Host, u.Path)
+	rootDir := sourceRootDir(s.BaseURL)
 	fullPath := filepath.Join(rootDir, path)
 
 	data, err := os.ReadFile(fullPath)
@@ -643,11 +644,7 @@ func (s Source) fetchLocalContent(path string) (string, error) {
 }
 
 func fetchLocal(rawURL string) (*http.Response, error) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, err
-	}
-	filePath := filepath.Join(u.Host, u.Path)
+	filePath := sourceRootDir(rawURL)
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err

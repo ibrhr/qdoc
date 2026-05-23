@@ -162,7 +162,8 @@ func TestPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Path() error: %v", err)
 	}
-	if path != filepath.Join(os.Getenv("HOME"), ".config", "qdoc", "config.json") {
+	home, _ := os.UserHomeDir()
+	if path != filepath.Join(home, ".config", "qdoc", "config.json") {
 		t.Errorf("Path() = %q, unexpected", path)
 	}
 }
