@@ -325,7 +325,12 @@ func ResolveClientWithMethod(cfg config.Config, accessMethodID string) (llm.Clie
 	}
 }
 
+var ConfigDir string
+
 func configDirPath() string {
+	if ConfigDir != "" {
+		return ConfigDir
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""

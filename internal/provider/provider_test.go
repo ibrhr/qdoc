@@ -60,6 +60,10 @@ func TestKeyExists_Neither(t *testing.T) {
 }
 
 func TestAnyKeyConfigured(t *testing.T) {
+	origDir := ConfigDir
+	ConfigDir = t.TempDir()
+	t.Cleanup(func() { ConfigDir = origDir })
+
 	tests := []struct {
 		name string
 		keys map[string]string
