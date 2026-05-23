@@ -19,6 +19,18 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+      - run: go mod verify
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
   windows:
     runs-on: windows-latest
     steps:

@@ -171,7 +171,7 @@ qdoc sources                   # list documentation sources
 
 ## Install
 
-### Shell script (Linux, macOS)
+### Shell script (all platforms)
 
 ```bash
 curl -fsSL https://qdoc.ibrhr.dev/install.sh | bash

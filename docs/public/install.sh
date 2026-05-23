@@ -168,7 +168,14 @@ if $is_windows; then
         exit 1
     fi
 else
-    actual=$(sha256sum "$tmp/$APP$ext" | awk '{print $1}')
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$tmp/$APP$ext" | awk '{print $1}')
+    elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$tmp/$APP$ext" | awk '{print $1}')
+    else
+        echo -e "${RED}No sha256 tool found${NC}" >&2
+        exit 1
+    fi
 fi
 
 expected=$(grep -F "$archive_name" "$tmp/checksums.txt" | awk '{print $1}')
@@ -206,6 +213,9 @@ fi
 
 if ! $is_windows; then
     chmod +x "$INSTALL_DIR/$app_bin"
+    if [ "$os" = "darwin" ]; then
+        xattr -d com.apple.quarantine "$INSTALL_DIR/$app_bin" 2>/dev/null || true
+    fi
 fi
 
 installed_ver=$("$INSTALL_DIR/$app_bin" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
@@ -251,6 +261,8 @@ maybe_add_path() {
         bash)
             if $is_windows; then
                 local f="$HOME/.bashrc"
+            elif [ "$os" = "darwin" ]; then
+                local f="$HOME/.bash_profile"
             else
                 local f="$HOME/.bash_profile"
                 [ ! -f "$f" ] && f="$HOME/.bashrc"
