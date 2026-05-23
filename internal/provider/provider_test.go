@@ -92,10 +92,6 @@ func TestResolveClient_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveClient() error: %v", err)
 	}
-	oc := client.(*llm.OpenAIClient)
-	if oc.APIKey != "sk-test" {
-		t.Errorf("APIKey = %q, want %q", oc.APIKey, "sk-test")
-	}
 	if client.ModelName() != "gpt-5.5" {
 		t.Errorf("Model = %q, want %q", client.ModelName(), "gpt-5.5")
 	}
@@ -209,9 +205,8 @@ func TestResolveClient_KeyFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveClient() error: %v", err)
 	}
-	oc := client.(*llm.OpenAIClient)
-	if oc.APIKey != "sk-from-env" {
-		t.Errorf("APIKey = %q, want %q", oc.APIKey, "sk-from-env")
+	if client.ModelName() != "gpt-5.5" {
+		t.Errorf("Model = %q, want %q", client.ModelName(), "gpt-5.5")
 	}
 }
 

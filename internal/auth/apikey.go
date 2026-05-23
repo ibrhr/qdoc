@@ -2,8 +2,6 @@ package auth
 
 import (
 	"net/http"
-
-	"github.com/ibrhr/qdoc/internal/provider"
 )
 
 type ApiKeyAuth struct{}
@@ -14,7 +12,7 @@ func (a *ApiKeyAuth) ApplyAuth(req *http.Request, token Token) {
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 }
 
-func (a *ApiKeyAuth) Authenticate(prov provider.Provider, store *TokenStore) <-chan AuthStatus {
+func (a *ApiKeyAuth) Authenticate(info ProviderInfo, store *TokenStore) <-chan AuthStatus {
 	ch := make(chan AuthStatus, 1)
 	go func() {
 		defer close(ch)
@@ -23,6 +21,6 @@ func (a *ApiKeyAuth) Authenticate(prov provider.Provider, store *TokenStore) <-c
 	return ch
 }
 
-func (a *ApiKeyAuth) Refresh(prov provider.Provider, token Token, store *TokenStore) (Token, error) {
+func (a *ApiKeyAuth) Refresh(info ProviderInfo, token Token, store *TokenStore) (Token, error) {
 	return Token{}, ErrNoRefresh
 }

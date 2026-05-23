@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/ibrhr/qdoc/internal/auth"
 	"github.com/ibrhr/qdoc/internal/config"
 	"github.com/ibrhr/qdoc/internal/docsource"
 	"github.com/ibrhr/qdoc/internal/llm"
@@ -24,10 +25,11 @@ const (
 type setupStep string
 
 const (
-	stepNone     setupStep = ""
-	stepProvider setupStep = "provider"
-	stepKey      setupStep = "key"
-	stepModel    setupStep = "model"
+	stepNone       setupStep = ""
+	stepProvider   setupStep = "provider"
+	stepKey        setupStep = "key"
+	stepModel      setupStep = "model"
+	stepDeviceAuth setupStep = "device_auth"
 )
 
 type phase int
@@ -114,6 +116,10 @@ type Model struct {
 
 	mode      modeType
 	setupStep setupStep
+
+	authMethod auth.AuthMethod
+	authStore  *auth.TokenStore
+	authStatus auth.AuthStatus
 
 	cursor         int
 	inputBuffer    string

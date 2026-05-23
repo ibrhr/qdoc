@@ -1,5 +1,7 @@
 package llm
 
+import "github.com/ibrhr/qdoc/internal/auth"
+
 type StreamDelta struct {
 	Content   string
 	Reasoning string
@@ -20,7 +22,8 @@ type Client interface {
 }
 
 type Config struct {
-	APIKey   string
+	Auth     auth.AuthMethod
+	Token    auth.Token
 	BaseURL  string
 	Model    string
 	Provider string

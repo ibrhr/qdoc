@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"github.com/ibrhr/qdoc/internal/auth"
 	"github.com/ibrhr/qdoc/internal/docsource"
 	"github.com/ibrhr/qdoc/internal/sessionlog"
 )
@@ -32,3 +33,8 @@ type queryCompleteMsg struct {
 }
 
 type setupCompleteMsg struct{}
+
+type authStatusMsg struct {
+	Status auth.AuthStatus
+	Ch     <-chan auth.AuthStatus
+}

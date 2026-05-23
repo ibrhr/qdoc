@@ -143,6 +143,7 @@
     "oauth_config": {
       "device_auth_url": "https://github.com/login/device/code",
       "token_url": "https://github.com/login/oauth/access_token",
+      "client_id": "Ov23liL3baaAQEK4ZK05",
       "scope": "read:user"
     },
     "env_key": "GITHUB_COPILOT_TOKEN",

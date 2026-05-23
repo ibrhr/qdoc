@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ibrhr/qdoc/internal/auth"
 	"github.com/ibrhr/qdoc/internal/retry"
 )
 
@@ -23,7 +24,8 @@ type ChatMessage struct {
 }
 
 type OpenAIClient struct {
-	APIKey   string
+	Auth     auth.AuthMethod
+	Token    auth.Token
 	BaseURL  string
 	Model    string
 	Provider string
@@ -40,7 +42,8 @@ func NewClient(apiType string, cfg Config) (Client, error) {
 	switch apiType {
 	case "openai-compat":
 		return &OpenAIClient{
-			APIKey:   cfg.APIKey,
+			Auth:     cfg.Auth,
+			Token:    cfg.Token,
 			BaseURL:  cfg.BaseURL,
 			Model:    cfg.Model,
 			Provider: cfg.Provider,
@@ -72,6 +75,7 @@ const (
 )
 
 func (c *OpenAIClient) setHeaders(req *http.Request) {
+	c.Auth.ApplyAuth(req, c.Token)
 	for k, v := range c.Headers {
 		req.Header.Set(k, v)
 	}
@@ -103,7 +107,6 @@ func (c *OpenAIClient) Send(messages []ChatMessage) (string, error) {
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+c.APIKey)
 		c.setHeaders(req)
 
 		resp, err := httpClient.Do(req)
@@ -188,7 +191,6 @@ func (c *OpenAIClient) Stream(messages []ChatMessage, ch chan<- StreamDelta) {
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+c.APIKey)
 		c.setHeaders(req)
 
 		resp, err := httpClient.Do(req)

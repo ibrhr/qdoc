@@ -6,6 +6,7 @@ import (
 	"os"
 	_ "embed"
 
+	"github.com/ibrhr/qdoc/internal/auth"
 	"github.com/ibrhr/qdoc/internal/config"
 	"github.com/ibrhr/qdoc/internal/llm"
 )
@@ -22,15 +23,7 @@ type Provider struct {
 	Models       []string `json:"models"`
 
 	Headers    map[string]string `json:"headers,omitempty"`
-	OAuthConfig *OAuthConfig      `json:"oauth_config,omitempty"`
-}
-
-type OAuthConfig struct {
-	DeviceAuthURL string `json:"device_auth_url,omitempty"`
-	TokenURL      string `json:"token_url,omitempty"`
-	AuthURL       string `json:"auth_url,omitempty"`
-	ClientID      string `json:"client_id,omitempty"`
-	Scope         string `json:"scope,omitempty"`
+	OAuthConfig *auth.OAuthConfig `json:"oauth_config,omitempty"`
 }
 
 func (p Provider) EffectiveAuthType() string {
@@ -42,6 +35,15 @@ func (p Provider) EffectiveAuthType() string {
 
 func (p Provider) HasMultipleAuthOptions() bool {
 	return len(p.AuthTypes) > 1
+}
+
+func (p Provider) AuthInfo() auth.ProviderInfo {
+	return auth.ProviderInfo{
+		Name:        p.Name,
+		AuthType:    p.EffectiveAuthType(),
+		OAuthConfig: p.OAuthConfig,
+		EnvKey:      p.EnvKey,
+	}
 }
 
 //go:embed providers.json
@@ -88,6 +90,11 @@ func keyExistsForProvider(cfg config.Config, name string) bool {
 	if cfg.Keys[name] != "" {
 		return true
 	}
+	if store, err := auth.LoadTokenStore(configDirPath()); err == nil {
+		if tok, ok := store.Get(name); ok && !tok.IsZero() {
+			return true
+		}
+	}
 	for _, p := range Providers {
 		if p.Name == name {
 			if os.Getenv(p.EnvKey) != "" {
@@ -110,11 +117,6 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 		return nil, ErrNoProvider{Name: providerName}
 	}
 
-	apiKey := os.Getenv(prov.EnvKey)
-	if apiKey == "" {
-		apiKey = cfg.Keys[prov.Name]
-	}
-
 	baseURL := os.Getenv("QDOC_BASE_URL")
 	if baseURL == "" {
 		baseURL = prov.BaseURL
@@ -129,22 +131,71 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 		}
 	}
 
-	if apiKey == "" {
-		return nil, ErrNoKey{Provider: prov.Name, EnvKey: prov.EnvKey}
-	}
-
 	apiType := prov.APIType
 	if apiType == "" {
 		apiType = "openai-compat"
 	}
 
-	return llm.NewClient(apiType, llm.Config{
-		APIKey:   apiKey,
-		BaseURL:  baseURL,
-		Model:    model,
-		Provider: prov.Name,
-		Headers:  prov.Headers,
-	})
+	authMethod, err := auth.ForProvider(prov.AuthInfo())
+	if err != nil {
+		return nil, err
+	}
+
+	switch prov.EffectiveAuthType() {
+	case "api_key":
+		token, err := resolveAPIKeyToken(prov, cfg)
+		if err != nil {
+			return nil, err
+		}
+		return llm.NewClient(apiType, llm.Config{
+			Auth:     authMethod,
+			Token:    token,
+			BaseURL:  baseURL,
+			Model:    model,
+			Provider: prov.Name,
+			Headers:  prov.Headers,
+		})
+
+	default:
+		store, err := auth.LoadTokenStore(configDirPath())
+		if err != nil {
+			return nil, fmt.Errorf("loading token store: %w", err)
+		}
+		token, ok := store.Get(prov.Name)
+		if !ok {
+			return nil, ErrNoKey{Provider: prov.Name, EnvKey: prov.EnvKey}
+		}
+		if store.IsExpired(prov.Name) {
+			return nil, fmt.Errorf("token for %s is expired — re-authenticate", prov.Name)
+		}
+		return llm.NewClient(apiType, llm.Config{
+			Auth:     authMethod,
+			Token:    token,
+			BaseURL:  baseURL,
+			Model:    model,
+			Provider: prov.Name,
+			Headers:  prov.Headers,
+		})
+	}
+}
+
+func configDirPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return home + "/.config/qdoc"
+}
+
+func resolveAPIKeyToken(prov Provider, cfg config.Config) (auth.Token, error) {
+	apiKey := os.Getenv(prov.EnvKey)
+	if apiKey == "" {
+		apiKey = cfg.Keys[prov.Name]
+	}
+	if apiKey == "" {
+		return auth.Token{}, ErrNoKey{Provider: prov.Name, EnvKey: prov.EnvKey}
+	}
+	return auth.Token{AccessToken: apiKey, TokenType: "bearer"}, nil
 }
 
 type ErrNoKey struct {

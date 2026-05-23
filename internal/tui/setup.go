@@ -2,10 +2,13 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/ibrhr/qdoc/internal/auth"
 	"github.com/ibrhr/qdoc/internal/config"
 	"github.com/ibrhr/qdoc/internal/provider"
 )
@@ -19,6 +22,9 @@ func (m *Model) updateSetup(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case progressTickMsg:
 		m.spinnerIdx = msg.tick / 100
 		return m, tickCmd()
+
+	case authStatusMsg:
+		return m.handleDeviceAuth(msg)
 
 	case tea.KeyPressMsg:
 		switch msg.String() {
@@ -37,6 +43,8 @@ func (m *Model) updateSetup(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleKeyInput(msg)
 		case stepModel:
 			return m.handleModelSelect(msg)
+		case stepDeviceAuth:
+			return m.handleDeviceAuthKey(msg)
 		}
 
 	case tea.PasteMsg:
@@ -67,8 +75,19 @@ func (m *Model) handleProviderSelect(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.cursor = 0
 		m.inputBuffer = ""
 
+		prov, _ := provider.Find(m.SelectedProvider)
+
+		am, err := auth.ForProvider(prov.AuthInfo())
+		if err != nil {
+			m.err = err
+			return m, nil
+		}
+
+		if prov.EffectiveAuthType() == "oauth_device" {
+			return m.initDeviceAuth(am, prov)
+		}
+
 		if provider.KeyExists(m.Cfg, m.SelectedProvider) {
-			prov, _ := provider.Find(m.SelectedProvider)
 			m.modelsList = provider.BuildModelList(prov)
 			m.setupStep = stepModel
 			return m, nil
@@ -78,6 +97,37 @@ func (m *Model) handleProviderSelect(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	return m, nil
+}
+
+func (m *Model) initDeviceAuth(am auth.AuthMethod, prov provider.Provider) (tea.Model, tea.Cmd) {
+	m.authMethod = am
+
+	store, err := auth.LoadTokenStore(configDir())
+	if err != nil {
+		m.err = fmt.Errorf("loading token store: %w", err)
+		return m, nil
+	}
+	m.authStore = store
+
+	tok, ok := store.Get(prov.Name)
+	if ok && !tok.IsZero() {
+		m.err = nil
+		m.modelsList = provider.BuildModelList(prov)
+		m.setupStep = stepModel
+		return m, nil
+	}
+
+	m.setupStep = stepDeviceAuth
+	m.authStatus = auth.AuthStatus{}
+	return m, startDeviceAuth(am, prov)
+}
+
+func configDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".config", "qdoc")
 }
 
 func (m *Model) handleKeyInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -195,6 +245,8 @@ func (m *Model) renderSetup() string {
 		return sb.String() + m.renderKeyInput() + "\n"
 	case stepModel:
 		return sb.String() + m.renderModelSelect() + "\n"
+	case stepDeviceAuth:
+		return sb.String() + m.renderDeviceAuth() + "\n"
 	default:
 		return sb.String() + m.renderStandaloneProvider() + "\n"
 	}
@@ -363,4 +415,108 @@ func renderProviderList(provList []provider.Provider, cursor int, cfg config.Con
 
 func renderSetupFooter() string {
 	return dimStyle.Render("  up/down or j/k navigate  ─  enter select  ─  esc quit")
+}
+
+func (m *Model) handleDeviceAuthKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "esc", "q":
+		m.setupStep = stepProvider
+		m.err = fmt.Errorf("device authorization cancelled")
+		return m, nil
+	}
+	return m, nil
+}
+
+func startDeviceAuth(am auth.AuthMethod, prov provider.Provider) tea.Cmd {
+	return func() tea.Msg {
+		info := prov.AuthInfo()
+		ch := am.Authenticate(info, nil)
+		s, ok := <-ch
+		if !ok {
+			return authStatusMsg{Status: auth.AuthStatus{Stage: auth.StageError, Err: fmt.Errorf("auth channel closed unexpectedly")}}
+		}
+		return authStatusMsg{Status: s, Ch: ch}
+	}
+}
+
+func readAuthStatus(ch <-chan auth.AuthStatus) tea.Cmd {
+	return func() tea.Msg {
+		s, ok := <-ch
+		if !ok {
+			return authStatusMsg{Status: auth.AuthStatus{Stage: auth.StageError, Err: fmt.Errorf("auth channel closed")}}
+		}
+		return authStatusMsg{Status: s, Ch: ch}
+	}
+}
+
+func (m *Model) handleDeviceAuth(msg authStatusMsg) (tea.Model, tea.Cmd) {
+	m.authStatus = msg.Status
+
+	switch msg.Status.Stage {
+	case auth.StageAwaitingUser, auth.StagePolling:
+		return m, readAuthStatus(msg.Ch)
+
+	case auth.StageAuthorized:
+		if msg.Status.Token != nil {
+			if m.authStore == nil {
+				store, err := auth.LoadTokenStore(configDir())
+				if err != nil {
+					m.err = err
+					m.setupStep = stepProvider
+					return m, nil
+				}
+				m.authStore = store
+			}
+			m.authStore.Set(m.SelectedProvider, *msg.Status.Token)
+		}
+		prov, _ := provider.Find(m.SelectedProvider)
+		m.modelsList = provider.BuildModelList(prov)
+		m.setupStep = stepModel
+		m.cursor = 0
+		return m, nil
+
+	case auth.StageError, auth.StageTimeout:
+		m.err = msg.Status.Err
+		m.setupStep = stepProvider
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) renderDeviceAuth() string {
+	var sb strings.Builder
+	sb.WriteString(renderSetupHeader("Setup — GitHub Copilot"))
+	sb.WriteString("\n")
+	sb.WriteString(dimStyle.Render("  Sign in with your GitHub account to use your Copilot subscription."))
+	sb.WriteString("\n\n")
+
+	switch m.authStatus.Stage {
+	case auth.StageAwaitingUser, auth.StagePolling:
+		if m.authStatus.VerificationURI != "" {
+			sb.WriteString(dimStyle.Render(fmt.Sprintf("  1. Visit: %s", m.authStatus.VerificationURI)))
+			sb.WriteString("\n")
+		}
+		if m.authStatus.UserCode != "" {
+			sb.WriteString(fmt.Sprintf("  2. Enter code: %s", sectionStyle.Render(m.authStatus.UserCode)))
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+
+		spin := dotFrames[m.spinnerIdx%len(dotFrames)]
+		msg := m.authStatus.Message
+		if msg == "" {
+			msg = "Waiting for authorization..."
+		}
+		sb.WriteString(dimStyle.Render(fmt.Sprintf("  %s %s", spin, msg)))
+		sb.WriteString("\n")
+
+		sb.WriteString("\n")
+		sb.WriteString(dimStyle.Render("  esc cancel"))
+
+	default:
+		sb.WriteString(dimStyle.Render("  Initializing..."))
+	}
+
+	return sb.String()
 }

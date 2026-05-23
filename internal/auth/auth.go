@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/ibrhr/qdoc/internal/provider"
 )
 
 type Token struct {
@@ -45,33 +43,51 @@ var (
 	ErrExpired   = errors.New("token expired or revoked")
 )
 
+type OAuthConfig struct {
+	DeviceAuthURL string `json:"device_auth_url,omitempty"`
+	TokenURL      string `json:"token_url,omitempty"`
+	AuthURL       string `json:"auth_url,omitempty"`
+	ClientID      string `json:"client_id,omitempty"`
+	Scope         string `json:"scope,omitempty"`
+}
+
+type ProviderInfo struct {
+	Name        string
+	AuthType    string
+	OAuthConfig *OAuthConfig
+	EnvKey      string
+}
+
 type AuthMethod interface {
 	Type() string
 
 	NeedsInteractiveAuth() bool
 
-	Authenticate(prov provider.Provider, store *TokenStore) <-chan AuthStatus
+	Authenticate(info ProviderInfo, store *TokenStore) <-chan AuthStatus
 
-	Refresh(prov provider.Provider, token Token, store *TokenStore) (Token, error)
+	Refresh(info ProviderInfo, token Token, store *TokenStore) (Token, error)
 
 	ApplyAuth(req *http.Request, token Token)
 }
 
-func ForProvider(prov provider.Provider) (AuthMethod, error) {
-	switch prov.EffectiveAuthType() {
+func ForProvider(info ProviderInfo) (AuthMethod, error) {
+	if info.AuthType == "" {
+		info.AuthType = "api_key"
+	}
+	switch info.AuthType {
 	case "api_key":
 		return &ApiKeyAuth{}, nil
 	case "oauth_device":
-		if prov.OAuthConfig == nil {
+		if info.OAuthConfig == nil {
 			return nil, errors.New("oauth_device provider missing oauth_config")
 		}
 		return &DeviceFlowAuth{
-			DeviceAuthURL: prov.OAuthConfig.DeviceAuthURL,
-			TokenURL:      prov.OAuthConfig.TokenURL,
-			ClientID:      prov.OAuthConfig.ClientID,
-			Scope:         prov.OAuthConfig.Scope,
+			DeviceAuthURL: info.OAuthConfig.DeviceAuthURL,
+			TokenURL:      info.OAuthConfig.TokenURL,
+			ClientID:      info.OAuthConfig.ClientID,
+			Scope:         info.OAuthConfig.Scope,
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported auth type: %s", prov.EffectiveAuthType())
+		return nil, fmt.Errorf("unsupported auth type: %s", info.AuthType)
 	}
 }

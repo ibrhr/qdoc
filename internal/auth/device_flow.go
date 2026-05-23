@@ -1,16 +1,14 @@
 package auth
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
-
-	"github.com/ibrhr/qdoc/internal/provider"
 )
 
 var deviceHTTPClient = &http.Client{
@@ -38,6 +36,7 @@ type tokenResp struct {
 	Scope        string `json:"scope"`
 	Error        string `json:"error"`
 	ErrorDesc    string `json:"error_description"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
 func (a *DeviceFlowAuth) Type() string               { return "oauth_device" }
@@ -46,17 +45,17 @@ func (a *DeviceFlowAuth) ApplyAuth(req *http.Request, token Token) {
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 }
 
-func (a *DeviceFlowAuth) Refresh(prov provider.Provider, token Token, store *TokenStore) (Token, error) {
+func (a *DeviceFlowAuth) Refresh(info ProviderInfo, token Token, store *TokenStore) (Token, error) {
 	return Token{}, ErrNoRefresh
 }
 
-func (a *DeviceFlowAuth) Authenticate(prov provider.Provider, store *TokenStore) <-chan AuthStatus {
+func (a *DeviceFlowAuth) Authenticate(info ProviderInfo, store *TokenStore) <-chan AuthStatus {
 	ch := make(chan AuthStatus, 1)
 
 	go func() {
 		defer close(ch)
 
-		clientID := osLookupEnv("QDOC_GITHUB_CLIENT_ID")
+		clientID := os.Getenv("QDOC_GITHUB_CLIENT_ID")
 		if clientID == "" {
 			clientID = a.ClientID
 		}
@@ -107,16 +106,17 @@ func (a *DeviceFlowAuth) Authenticate(prov provider.Provider, store *TokenStore)
 			tok, pollErr := a.pollToken(clientID, device.DeviceCode)
 			if pollErr == nil {
 				tkn := Token{
-					AccessToken: tok.AccessToken,
-					TokenType:   tok.TokenType,
-					Scope:       tok.Scope,
+					AccessToken:  tok.AccessToken,
+					RefreshToken: tok.RefreshToken,
+					TokenType:    tok.TokenType,
+					Scope:        tok.Scope,
 				}
 				if tkn.TokenType == "" {
 					tkn.TokenType = "bearer"
 				}
 
 				if store != nil {
-					if err := store.Set(prov.Name, tkn); err != nil {
+					if err := store.Set(info.Name, tkn); err != nil {
 						ch <- AuthStatus{Stage: StageError, Err: fmt.Errorf("saving token: %w", err)}
 						return
 					}

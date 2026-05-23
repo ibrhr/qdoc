@@ -8,7 +8,42 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/ibrhr/qdoc/internal/auth"
 )
+
+func apiKeyToken(key string) auth.Token {
+	return auth.Token{AccessToken: key, TokenType: "bearer"}
+}
+
+func testClient(baseURL string, apiKey string) *OpenAIClient {
+	return &OpenAIClient{
+		Auth:     &auth.ApiKeyAuth{},
+		Token:    apiKeyToken(apiKey),
+		BaseURL:  baseURL,
+		Model:    "test-model",
+	}
+}
+
+func testClientWithHeaders(baseURL string, apiKey string, headers map[string]string) *OpenAIClient {
+	return &OpenAIClient{
+		Auth:     &auth.ApiKeyAuth{},
+		Token:    apiKeyToken(apiKey),
+		BaseURL:  baseURL,
+		Model:    "test-model",
+		Headers:  headers,
+	}
+}
+
+func testConfig(apiKey string) Config {
+	return Config{
+		Auth:     &auth.ApiKeyAuth{},
+		Token:    apiKeyToken(apiKey),
+		BaseURL:  "https://api.openai.com/v1",
+		Model:    "gpt-4",
+		Provider: "openai",
+	}
+}
 
 func TestClient_Send_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -25,11 +60,7 @@ func TestClient_Send_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	result, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err != nil {
@@ -47,11 +78,7 @@ func TestClient_Send_Unauthorized(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "bad-key",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "bad-key")
 
 	_, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err == nil {
@@ -79,11 +106,7 @@ func TestClient_Send_Retryable(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	result, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err != nil {
@@ -103,11 +126,7 @@ func TestClient_Send_RetryExhausted(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	_, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err == nil {
@@ -127,11 +146,7 @@ func TestClient_Send_EmptyChoices(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	_, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err == nil {
@@ -145,11 +160,7 @@ func TestClient_Send_MalformedJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	_, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err == nil {
@@ -176,11 +187,7 @@ func TestClient_Stream_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	ch := make(chan StreamDelta, 256)
 	go client.Stream([]ChatMessage{{Role: "user", Content: "hi"}}, ch)
@@ -214,11 +221,7 @@ func TestClient_Stream_Unauthorized(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "bad-key",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "bad-key")
 
 	ch := make(chan StreamDelta, 256)
 	go client.Stream([]ChatMessage{{Role: "user", Content: "hi"}}, ch)
@@ -258,11 +261,7 @@ func TestClient_Stream_RetryThenSuccess(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	ch := make(chan StreamDelta, 256)
 	go client.Stream([]ChatMessage{{Role: "user", Content: "hi"}}, ch)
@@ -303,11 +302,7 @@ func TestClient_Stream_RetryExhausted(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-	}
+	client := testClient(srv.URL, "sk-test")
 
 	ch := make(chan StreamDelta, 256)
 	go client.Stream([]ChatMessage{{Role: "user", Content: "hi"}}, ch)
@@ -358,12 +353,7 @@ func TestClient_HeadersSent(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := &OpenAIClient{
-		APIKey:  "sk-test",
-		BaseURL: srv.URL,
-		Model:   "test-model",
-		Headers: map[string]string{"x-custom": "custom-value"},
-	}
+	client := testClientWithHeaders(srv.URL, "sk-test", map[string]string{"x-custom": "custom-value"})
 
 	result, err := client.Send([]ChatMessage{{Role: "user", Content: "hi"}})
 	if err != nil {
@@ -375,12 +365,7 @@ func TestClient_HeadersSent(t *testing.T) {
 }
 
 func TestNewClient_OpenAICompat(t *testing.T) {
-	client, err := NewClient("openai-compat", Config{
-		APIKey:   "sk-test",
-		BaseURL:  "https://api.openai.com/v1",
-		Model:    "gpt-4",
-		Provider: "openai",
-	})
+	client, err := NewClient("openai-compat", testConfig("sk-test"))
 	if err != nil {
 		t.Fatalf("NewClient() error: %v", err)
 	}
@@ -393,21 +378,14 @@ func TestNewClient_OpenAICompat(t *testing.T) {
 }
 
 func TestNewClient_EmptyAPIType(t *testing.T) {
-	_, err := NewClient("", Config{
-		APIKey:   "sk-test",
-		BaseURL:  "https://api.openai.com/v1",
-		Model:    "gpt-4",
-		Provider: "openai",
-	})
+	_, err := NewClient("", testConfig("sk-test"))
 	if err != nil {
 		t.Fatalf("NewClient() with empty api_type should default to openai-compat: %v", err)
 	}
 }
 
 func TestNewClient_Unsupported(t *testing.T) {
-	_, err := NewClient("anthropic", Config{
-		APIKey: "sk-test",
-	})
+	_, err := NewClient("anthropic", testConfig("sk-test"))
 	if err == nil {
 		t.Fatal("expected error for unsupported api_type")
 	}
@@ -415,13 +393,9 @@ func TestNewClient_Unsupported(t *testing.T) {
 
 func TestNewClient_HeadersPassthrough(t *testing.T) {
 	headers := map[string]string{"anthropic-version": "2023-06-01"}
-	client, err := NewClient("openai-compat", Config{
-		APIKey:   "sk-test",
-		BaseURL:  "https://api.openai.com/v1",
-		Model:    "gpt-4",
-		Provider: "openai",
-		Headers:  headers,
-	})
+	cfg := testConfig("sk-test")
+	cfg.Headers = headers
+	client, err := NewClient("openai-compat", cfg)
 	if err != nil {
 		t.Fatalf("NewClient() error: %v", err)
 	}
