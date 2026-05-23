@@ -37,6 +37,8 @@ type tokenResp struct {
 	Error        string `json:"error"`
 	ErrorDesc    string `json:"error_description"`
 	RefreshToken string `json:"refresh_token,omitempty"`
+	IDToken      string `json:"id_token,omitempty"`
+	ExpiresIn    int    `json:"expires_in,omitempty"`
 }
 
 func (a *DeviceFlowAuth) Type() string               { return "oauth_device" }

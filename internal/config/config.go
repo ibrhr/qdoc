@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	Provider string            `json:"provider"`
-	Keys     map[string]string `json:"keys"`
-	Models   map[string]string `json:"models"`
+	Provider     string            `json:"provider"`
+	AccessMethod string            `json:"access_method,omitempty"`
+	Keys         map[string]string `json:"keys"`
+	Models       map[string]string `json:"models"`
 }
 
 func Default() Config {

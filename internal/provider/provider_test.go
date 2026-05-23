@@ -304,9 +304,14 @@ func TestProviderDefaultsToAPIKey(t *testing.T) {
 }
 
 func TestProviderMultipleAuthOptions(t *testing.T) {
-	prov := Provider{AuthTypes: []string{"api_key", "oauth_pkce"}}
+	prov := Provider{
+		AccessMethods: []AccessMethod{
+			{ID: "api-key", Name: "API Key", AuthType: "api_key"},
+			{ID: "subscription", Name: "Subscription", AuthType: "oauth_pkce"},
+		},
+	}
 	if !prov.HasMultipleAuthOptions() {
-		t.Error("provider with 2 auth_types should have multiple options")
+		t.Error("provider with 2 access_methods should have multiple options")
 	}
 }
 

@@ -11,22 +11,55 @@ import (
 	"github.com/ibrhr/qdoc/internal/llm"
 )
 
+type AccessMethod struct {
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	BaseURL     string            `json:"base_url"`
+	APIType     string            `json:"api_type"`
+	AuthType    string            `json:"auth_type"`
+	EnvKey      string            `json:"env_key,omitempty"`
+	OAuthConfig *auth.OAuthConfig `json:"oauth_config,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
+	Description string            `json:"description,omitempty"`
+}
+
+func (am AccessMethod) EffectiveAuthType() string {
+	if am.AuthType != "" {
+		return am.AuthType
+	}
+	return "api_key"
+}
+
+func (am AccessMethod) AuthInfo(provName string) auth.ProviderInfo {
+	return auth.ProviderInfo{
+		Name:        provName,
+		AuthType:    am.EffectiveAuthType(),
+		OAuthConfig: am.OAuthConfig,
+		EnvKey:      am.EnvKey,
+	}
+}
+
 type Provider struct {
 	Name         string   `json:"name"`
-	BaseURL      string   `json:"base_url"`
-	APIType      string   `json:"api_type"`
-	AuthType     string   `json:"auth_type"`
-	AuthTypes    []string `json:"auth_types,omitempty"`
-	EnvKey       string   `json:"env_key,omitempty"`
 	DefaultModel string   `json:"default_model"`
 	Description  string   `json:"description"`
 	Models       []string `json:"models"`
 
-	Headers    map[string]string `json:"headers,omitempty"`
-	OAuthConfig *auth.OAuthConfig `json:"oauth_config,omitempty"`
+	AccessMethods []AccessMethod `json:"access_methods,omitempty"`
+
+	BaseURL      string            `json:"base_url,omitempty"`
+	APIType      string            `json:"api_type,omitempty"`
+	AuthType     string            `json:"auth_type,omitempty"`
+	AuthTypes    []string          `json:"auth_types,omitempty"`
+	EnvKey       string            `json:"env_key,omitempty"`
+	Headers      map[string]string `json:"headers,omitempty"`
+	OAuthConfig  *auth.OAuthConfig `json:"oauth_config,omitempty"`
 }
 
 func (p Provider) EffectiveAuthType() string {
+	if len(p.AccessMethods) > 0 {
+		return p.AccessMethods[0].EffectiveAuthType()
+	}
 	if p.AuthType != "" {
 		return p.AuthType
 	}
@@ -34,13 +67,67 @@ func (p Provider) EffectiveAuthType() string {
 }
 
 func (p Provider) HasMultipleAuthOptions() bool {
-	return len(p.AuthTypes) > 1
+	return len(p.AccessMethods) > 1
+}
+
+func (p Provider) HasAccessMethods() bool {
+	return len(p.AccessMethods) > 0
+}
+
+func (p Provider) GetAccessMethod(id string) *AccessMethod {
+	for i := range p.AccessMethods {
+		if p.AccessMethods[i].ID == id {
+			return &p.AccessMethods[i]
+		}
+	}
+	return nil
+}
+
+func (p Provider) DefaultAccessMethod() *AccessMethod {
+	if len(p.AccessMethods) > 0 {
+		return &p.AccessMethods[0]
+	}
+	if p.BaseURL != "" {
+		at := p.AuthType
+		if at == "" {
+			at = "api_key"
+		}
+		return &AccessMethod{
+			ID:          "default",
+			Name:        p.Name,
+			BaseURL:     p.BaseURL,
+			APIType:     p.APIType,
+			AuthType:    at,
+			EnvKey:      p.EnvKey,
+			OAuthConfig: p.OAuthConfig,
+			Headers:     p.Headers,
+		}
+	}
+	return nil
+}
+
+func (p Provider) AccessMethodAuthInfo(method *AccessMethod) auth.ProviderInfo {
+	if method != nil {
+		return method.AuthInfo(p.Name)
+	}
+	return p.AuthInfo()
 }
 
 func (p Provider) AuthInfo() auth.ProviderInfo {
+	if len(p.AccessMethods) > 0 {
+		return p.AccessMethods[0].AuthInfo(p.Name)
+	}
+	if p.BaseURL != "" {
+		am := p.DefaultAccessMethod()
+		return am.AuthInfo(p.Name)
+	}
+	at := p.AuthType
+	if at == "" {
+		at = "api_key"
+	}
 	return auth.ProviderInfo{
 		Name:        p.Name,
-		AuthType:    p.EffectiveAuthType(),
+		AuthType:    at,
 		OAuthConfig: p.OAuthConfig,
 		EnvKey:      p.EnvKey,
 	}
@@ -74,31 +161,63 @@ func BuildModelList(prov Provider) []string {
 }
 
 func KeyExists(cfg config.Config, name string) bool {
-	return keyExistsForProvider(cfg, name)
+	return keyExistsForProvider(cfg, name, "")
+}
+
+func KeyExistsForMethod(cfg config.Config, provName, methodID string) bool {
+	return keyExistsForProvider(cfg, provName, methodID)
 }
 
 func AnyKeyConfigured(cfg config.Config) bool {
 	for _, p := range Providers {
-		if keyExistsForProvider(cfg, p.Name) {
+		if keyExistsForProvider(cfg, p.Name, "") {
 			return true
 		}
 	}
 	return false
 }
 
-func keyExistsForProvider(cfg config.Config, name string) bool {
+func tokenStoreKey(provName, methodID string) string {
+	if methodID != "" {
+		return provName + ":" + methodID
+	}
+	return provName
+}
+
+func keyExistsForProvider(cfg config.Config, name, methodID string) bool {
 	if cfg.Keys[name] != "" {
 		return true
 	}
 	if store, err := auth.LoadTokenStore(configDirPath()); err == nil {
-		if tok, ok := store.Get(name); ok && !tok.IsZero() {
+		if tok, ok := store.Get(tokenStoreKey(name, methodID)); ok && !tok.IsZero() {
 			return true
+		}
+		if methodID != "" {
+			if tok, ok := store.Get(name); ok && !tok.IsZero() {
+				return true
+			}
+		} else {
+			for _, p := range Providers {
+				if p.Name == name {
+					for _, am := range p.AccessMethods {
+						if tok, ok := store.Get(name + ":" + am.ID); ok && !tok.IsZero() {
+							return true
+						}
+					}
+					break
+				}
+			}
 		}
 	}
 	for _, p := range Providers {
 		if p.Name == name {
 			if os.Getenv(p.EnvKey) != "" {
 				return true
+			}
+			for _, am := range p.AccessMethods {
+				if os.Getenv(am.EnvKey) != "" {
+					return true
+				}
 			}
 			break
 		}
@@ -107,6 +226,10 @@ func keyExistsForProvider(cfg config.Config, name string) bool {
 }
 
 func ResolveClient(cfg config.Config) (llm.Client, error) {
+	return ResolveClientWithMethod(cfg, "")
+}
+
+func ResolveClientWithMethod(cfg config.Config, accessMethodID string) (llm.Client, error) {
 	providerName := os.Getenv("QDOC_PROVIDER")
 	if providerName == "" {
 		providerName = cfg.Provider
@@ -117,9 +240,25 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 		return nil, ErrNoProvider{Name: providerName}
 	}
 
+	method := prov.DefaultAccessMethod()
+	if accessMethodID != "" || cfg.AccessMethod != "" {
+		lookupID := accessMethodID
+		if lookupID == "" {
+			lookupID = cfg.AccessMethod
+		}
+		if am := prov.GetAccessMethod(lookupID); am != nil {
+			method = am
+		}
+	}
+	if method == nil {
+		return nil, fmt.Errorf("no access method available for %s", prov.Name)
+	}
+
+	info := method.AuthInfo(prov.Name)
+
 	baseURL := os.Getenv("QDOC_BASE_URL")
 	if baseURL == "" {
-		baseURL = prov.BaseURL
+		baseURL = method.BaseURL
 	}
 
 	model := os.Getenv("QDOC_MODEL")
@@ -131,19 +270,21 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 		}
 	}
 
-	apiType := prov.APIType
+	apiType := method.APIType
 	if apiType == "" {
 		apiType = "openai-compat"
 	}
 
-	authMethod, err := auth.ForProvider(prov.AuthInfo())
+	authMethod, err := auth.ForProvider(info)
 	if err != nil {
 		return nil, err
 	}
 
-	switch prov.EffectiveAuthType() {
+	tsKey := tokenStoreKey(prov.Name, method.ID)
+
+	switch info.AuthType {
 	case "api_key":
-		token, err := resolveAPIKeyToken(prov, cfg)
+		token, err := resolveAPIKeyToken(method.EnvKey, prov.Name, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -153,7 +294,7 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 			BaseURL:  baseURL,
 			Model:    model,
 			Provider: prov.Name,
-			Headers:  prov.Headers,
+			Headers:  mergeHeaders(method.Headers),
 		})
 
 	default:
@@ -161,11 +302,16 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("loading token store: %w", err)
 		}
-		token, ok := store.Get(prov.Name)
+		token, ok := store.Get(tsKey)
+		foundKey := tsKey
 		if !ok {
-			return nil, ErrNoKey{Provider: prov.Name, EnvKey: prov.EnvKey}
+			token, ok = store.Get(prov.Name)
+			foundKey = prov.Name
 		}
-		if store.IsExpired(prov.Name) {
+		if !ok {
+			return nil, ErrNoKey{Provider: prov.Name, EnvKey: method.EnvKey}
+		}
+		if store.IsExpired(foundKey) {
 			return nil, fmt.Errorf("token for %s is expired — re-authenticate", prov.Name)
 		}
 		return llm.NewClient(apiType, llm.Config{
@@ -174,7 +320,7 @@ func ResolveClient(cfg config.Config) (llm.Client, error) {
 			BaseURL:  baseURL,
 			Model:    model,
 			Provider: prov.Name,
-			Headers:  prov.Headers,
+			Headers:  mergeHeaders(method.Headers),
 		})
 	}
 }
@@ -187,15 +333,26 @@ func configDirPath() string {
 	return home + "/.config/qdoc"
 }
 
-func resolveAPIKeyToken(prov Provider, cfg config.Config) (auth.Token, error) {
-	apiKey := os.Getenv(prov.EnvKey)
+func resolveAPIKeyToken(envKey, provName string, cfg config.Config) (auth.Token, error) {
+	apiKey := os.Getenv(envKey)
 	if apiKey == "" {
-		apiKey = cfg.Keys[prov.Name]
+		apiKey = cfg.Keys[provName]
 	}
 	if apiKey == "" {
-		return auth.Token{}, ErrNoKey{Provider: prov.Name, EnvKey: prov.EnvKey}
+		return auth.Token{}, ErrNoKey{Provider: provName, EnvKey: envKey}
 	}
 	return auth.Token{AccessToken: apiKey, TokenType: "bearer"}, nil
+}
+
+func mergeHeaders(methodHeaders map[string]string) map[string]string {
+	if methodHeaders == nil {
+		return nil
+	}
+	result := make(map[string]string, len(methodHeaders))
+	for k, v := range methodHeaders {
+		result[k] = v
+	}
+	return result
 }
 
 type ErrNoKey struct {

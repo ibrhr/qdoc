@@ -49,6 +49,15 @@ func NewClient(apiType string, cfg Config) (Client, error) {
 			Provider: cfg.Provider,
 			Headers:  cfg.Headers,
 		}, nil
+	case "openai-codex":
+		return &CodexClient{
+			Auth:     cfg.Auth,
+			Token:    cfg.Token,
+			BaseURL:  cfg.BaseURL,
+			Model:    cfg.Model,
+			Provider: cfg.Provider,
+			Headers:  cfg.Headers,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported api type: %s", apiType)
 	}

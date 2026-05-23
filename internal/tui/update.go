@@ -154,7 +154,7 @@ func (m *Model) handleDocIndex(msg docIndexMsg) (tea.Model, tea.Cmd) {
 	m.qState = qStateIndexFetched
 	m.addStep("Fetched index", fmt.Sprintf("%d pages", len(msg.entries)))
 
-	client, err := provider.ResolveClient(m.Cfg)
+	client, err := m.resolveClient()
 	if err != nil {
 		m.mode = modeQuery
 		m.setupStep = stepProvider
@@ -449,4 +449,11 @@ func (m *Model) addStep(phase, detail string) {
 		Phase:  phase,
 		Detail: detail,
 	})
+}
+
+func (m *Model) resolveClient() (llm.Client, error) {
+	if m.Cfg.AccessMethod != "" {
+		return provider.ResolveClientWithMethod(m.Cfg, m.Cfg.AccessMethod)
+	}
+	return provider.ResolveClient(m.Cfg)
 }

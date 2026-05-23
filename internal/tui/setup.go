@@ -3,7 +3,9 @@ package tui
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -24,7 +26,12 @@ func (m *Model) updateSetup(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tickCmd()
 
 	case authStatusMsg:
-		return m.handleDeviceAuth(msg)
+		switch m.setupStep {
+		case stepDeviceAuth:
+			return m.handleDeviceAuth(msg)
+		case stepPkceAuth:
+			return m.handlePkceAuth(msg)
+		}
 
 	case tea.KeyPressMsg:
 		switch msg.String() {
@@ -39,12 +46,16 @@ func (m *Model) updateSetup(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.setupStep {
 		case stepProvider:
 			return m.handleProviderSelect(msg)
+		case stepAccessMethod:
+			return m.handleAccessMethodSelect(msg)
 		case stepKey:
 			return m.handleKeyInput(msg)
 		case stepModel:
 			return m.handleModelSelect(msg)
 		case stepDeviceAuth:
 			return m.handleDeviceAuthKey(msg)
+		case stepPkceAuth:
+			return m.handlePkceAuthKey(msg)
 		}
 
 	case tea.PasteMsg:
@@ -71,32 +82,115 @@ func (m *Model) handleProviderSelect(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.cursor = 0
 		}
 	case "enter":
-		m.SelectedProvider = m.providersList[m.cursor].Name
+		prov := m.providersList[m.cursor]
+		m.SelectedProvider = prov.Name
 		m.cursor = 0
 		m.inputBuffer = ""
 
+		if prov.HasAccessMethods() && len(prov.AccessMethods) > 1 {
+			m.accessMethods = prov.AccessMethods
+			m.setupStep = stepAccessMethod
+			return m, nil
+		}
+
+		return m.continueAfterProviderSelect(prov)
+	}
+	return m, nil
+}
+
+func (m *Model) continueAfterProviderSelect(prov provider.Provider) (tea.Model, tea.Cmd) {
+	am, err := auth.ForProvider(prov.AuthInfo())
+	if err != nil {
+		m.err = err
+		return m, nil
+	}
+
+	if prov.EffectiveAuthType() == "oauth_device" {
+		return m.initDeviceAuth(am, prov)
+	}
+
+	if provider.KeyExists(m.Cfg, m.SelectedProvider) {
+		m.modelsList = provider.BuildModelList(prov)
+		m.setupStep = stepModel
+		return m, nil
+	}
+
+	m.setupStep = stepKey
+	return m, nil
+}
+
+func (m *Model) handleAccessMethodSelect(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	m.err = nil
+
+	switch msg.String() {
+	case "up", "k":
+		m.cursor--
+		if m.cursor < 0 {
+			m.cursor = len(m.accessMethods) - 1
+		}
+	case "down", "j":
+		m.cursor++
+		if m.cursor >= len(m.accessMethods) {
+			m.cursor = 0
+		}
+	case "enter":
+		method := m.accessMethods[m.cursor]
+		m.SelectedAccessMethod = method.ID
+		m.cursor = 0
+
 		prov, _ := provider.Find(m.SelectedProvider)
 
-		am, err := auth.ForProvider(prov.AuthInfo())
+		info := method.AuthInfo(prov.Name)
+		am, err := auth.ForProvider(info)
 		if err != nil {
 			m.err = err
 			return m, nil
 		}
 
-		if prov.EffectiveAuthType() == "oauth_device" {
-			return m.initDeviceAuth(am, prov)
-		}
+		switch method.EffectiveAuthType() {
+		case "oauth_device":
+			return m.initDeviceAuthForMethod(am, prov, method)
 
-		if provider.KeyExists(m.Cfg, m.SelectedProvider) {
-			m.modelsList = provider.BuildModelList(prov)
-			m.setupStep = stepModel
+		case "oauth_pkce":
+			return m.initPkceAuth(am, prov, method)
+
+		default:
+			methodKey := method.EnvKey
+			if methodKey == "" {
+				methodKey = prov.EnvKey
+			}
+			if provider.KeyExistsForMethod(m.Cfg, m.SelectedProvider, method.ID) {
+				m.modelsList = provider.BuildModelList(prov)
+				m.setupStep = stepModel
+				return m, nil
+			}
+			m.setupStep = stepKey
 			return m, nil
 		}
-
-		m.setupStep = stepKey
-		return m, nil
 	}
 	return m, nil
+}
+
+func (m *Model) initDeviceAuthForMethod(am auth.AuthMethod, prov provider.Provider, method provider.AccessMethod) (tea.Model, tea.Cmd) {
+	m.authMethod = am
+
+	store, err := auth.LoadTokenStore(configDir())
+	if err != nil {
+		m.err = fmt.Errorf("loading token store: %w", err)
+		return m, nil
+	}
+	m.authStore = store
+
+	tok, ok := store.Get(prov.Name)
+	if ok && !tok.IsZero() {
+		m.modelsList = provider.BuildModelList(prov)
+		m.setupStep = stepModel
+		return m, nil
+	}
+
+	m.setupStep = stepDeviceAuth
+	m.authStatus = auth.AuthStatus{}
+	return m, startDeviceAuthForMethod(am, prov, method)
 }
 
 func (m *Model) initDeviceAuth(am auth.AuthMethod, prov provider.Provider) (tea.Model, tea.Cmd) {
@@ -119,7 +213,36 @@ func (m *Model) initDeviceAuth(am auth.AuthMethod, prov provider.Provider) (tea.
 
 	m.setupStep = stepDeviceAuth
 	m.authStatus = auth.AuthStatus{}
-	return m, startDeviceAuth(am, prov)
+	return m, startDeviceAuthForMethod(am, prov, provider.AccessMethod{})
+}
+
+func (m *Model) initPkceAuth(am auth.AuthMethod, prov provider.Provider, method provider.AccessMethod) (tea.Model, tea.Cmd) {
+	m.authMethod = am
+	m.SelectedAccessMethod = method.ID
+
+	store, err := auth.LoadTokenStore(configDir())
+	if err != nil {
+		m.err = fmt.Errorf("loading token store: %w", err)
+		return m, nil
+	}
+	m.authStore = store
+
+	tsKey := prov.Name + ":" + method.ID
+	tok, ok := store.Get(tsKey)
+	foundKey := tsKey
+	if !ok {
+		tok, ok = store.Get(prov.Name)
+		foundKey = prov.Name
+	}
+	if ok && !tok.IsZero() && !store.IsExpired(foundKey) {
+		m.modelsList = provider.BuildModelList(prov)
+		m.setupStep = stepModel
+		return m, nil
+	}
+
+	m.setupStep = stepPkceAuth
+	m.authStatus = auth.AuthStatus{}
+	return m, startPkceAuth(am, prov, method)
 }
 
 func configDir() string {
@@ -198,6 +321,9 @@ func (m *Model) handleModelSelect(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.Cfg.Models[m.SelectedProvider] = m.modelsList[m.cursor]
 		}
 		m.Cfg.Provider = m.SelectedProvider
+		if m.SelectedAccessMethod != "" {
+			m.Cfg.AccessMethod = m.SelectedAccessMethod
+		}
 		config.Save(m.Cfg)
 
 		if m.mode == modeModel {
@@ -241,12 +367,16 @@ func (m *Model) renderSetup() string {
 	switch m.setupStep {
 	case stepProvider:
 		return sb.String() + m.renderProviderSelect() + "\n"
+	case stepAccessMethod:
+		return sb.String() + m.renderAccessMethodSelect() + "\n"
 	case stepKey:
 		return sb.String() + m.renderKeyInput() + "\n"
 	case stepModel:
 		return sb.String() + m.renderModelSelect() + "\n"
 	case stepDeviceAuth:
 		return sb.String() + m.renderDeviceAuth() + "\n"
+	case stepPkceAuth:
+		return sb.String() + m.renderPkceAuth() + "\n"
 	default:
 		return sb.String() + m.renderStandaloneProvider() + "\n"
 	}
@@ -270,6 +400,39 @@ func (m Model) renderProviderSelect() string {
 	sb.WriteString("\n\n")
 	sb.WriteString(renderProviderList(m.providersList, m.cursor, m.Cfg))
 	sb.WriteString("\n\n")
+	sb.WriteString(renderSetupFooter())
+	return sb.String()
+}
+
+func (m Model) renderAccessMethodSelect() string {
+	var sb strings.Builder
+	sb.WriteString(renderSetupHeader(fmt.Sprintf("Setup — %s — Access Method", m.SelectedProvider)))
+	sb.WriteString("\n")
+	sb.WriteString(dimStyle.Render("  This provider supports multiple ways to connect. Choose one:"))
+	sb.WriteString("\n\n")
+
+	for i, am := range m.accessMethods {
+		cursorMark := "  "
+		if i == m.cursor {
+			cursorMark = cursorStyle.Render(">")
+		}
+
+		desc := am.Description
+		if desc == "" {
+			desc = am.Name
+		}
+
+		line := fmt.Sprintf("%s %s", cursorMark, am.Name)
+		if i == m.cursor {
+			sb.WriteString(cursorStyle.Render(line))
+		} else {
+			sb.WriteString(dimStyle.Render(line))
+		}
+		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("     %s\n", dimStyle.Render(desc)))
+	}
+
+	sb.WriteString("\n")
 	sb.WriteString(renderSetupFooter())
 	return sb.String()
 }
@@ -308,12 +471,12 @@ func (m *Model) renderModelSelect() string {
 	sb.WriteString(dimStyle.Render("  Press enter on a model to select it, or on the default to skip."))
 	sb.WriteString("\n\n")
 
-	fixedLines := 7 // header + blank + provider + instruction + blank + blank + footer
+	fixedLines := 7
 	if m.err != nil {
-		fixedLines += 2 // error line + blank
+		fixedLines += 2
 	}
 	if m.mode == modeQuery && m.setupStep != stepNone && m.Query != "" {
-		fixedLines += 2 // paused message + blank
+		fixedLines += 2
 	}
 
 	visible := m.Height - fixedLines
@@ -394,6 +557,15 @@ func renderProviderList(provList []provider.Provider, cursor int, cfg config.Con
 		status := dimStyle.Render(" (no key)")
 		if cfg.Keys[p.Name] != "" {
 			status = successStyle.Render(" (key set)")
+		} else if p.HasAccessMethods() {
+			for _, am := range p.AccessMethods {
+				if am.AuthType == "oauth_pkce" || am.AuthType == "oauth_device" {
+					if provider.KeyExistsForMethod(cfg, p.Name, am.ID) {
+						status = successStyle.Render(" (connected)")
+						break
+					}
+				}
+			}
 		}
 
 		activeMark := ""
@@ -401,7 +573,12 @@ func renderProviderList(provList []provider.Provider, cursor int, cfg config.Con
 			activeMark = sectionStyle.Render(" <- active")
 		}
 
-		line := fmt.Sprintf("%s %s%s%s", cursorMark, p.Name, status, activeMark)
+		authHint := ""
+		if p.HasAccessMethods() && len(p.AccessMethods) > 1 {
+			authHint = dimStyle.Render("  [multiple sign-in options]")
+		}
+
+		line := fmt.Sprintf("%s %s%s%s%s", cursorMark, p.Name, status, activeMark, authHint)
 		if i == cursor {
 			sb.WriteString(cursorStyle.Render(line))
 		} else {
@@ -427,9 +604,38 @@ func (m *Model) handleDeviceAuthKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handlePkceAuthKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "esc", "q":
+		m.setupStep = stepProvider
+		m.err = fmt.Errorf("authorization cancelled")
+		return m, nil
+	}
+	return m, nil
+}
+
 func startDeviceAuth(am auth.AuthMethod, prov provider.Provider) tea.Cmd {
+	return startDeviceAuthForMethod(am, prov, provider.AccessMethod{})
+}
+
+func startDeviceAuthForMethod(am auth.AuthMethod, prov provider.Provider, method provider.AccessMethod) tea.Cmd {
 	return func() tea.Msg {
 		info := prov.AuthInfo()
+		if method.ID != "" {
+			info = method.AuthInfo(prov.Name)
+		}
+		ch := am.Authenticate(info, nil)
+		s, ok := <-ch
+		if !ok {
+			return authStatusMsg{Status: auth.AuthStatus{Stage: auth.StageError, Err: fmt.Errorf("auth channel closed unexpectedly")}}
+		}
+		return authStatusMsg{Status: s, Ch: ch}
+	}
+}
+
+func startPkceAuth(am auth.AuthMethod, prov provider.Provider, method provider.AccessMethod) tea.Cmd {
+	return func() tea.Msg {
+		info := method.AuthInfo(prov.Name)
 		ch := am.Authenticate(info, nil)
 		s, ok := <-ch
 		if !ok {
@@ -484,6 +690,59 @@ func (m *Model) handleDeviceAuth(msg authStatusMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handlePkceAuth(msg authStatusMsg) (tea.Model, tea.Cmd) {
+	m.authStatus = msg.Status
+
+	switch msg.Status.Stage {
+	case auth.StageAwaitingUser:
+		if msg.Status.VerificationURI != "" {
+			openBrowser(msg.Status.VerificationURI)
+		}
+		return m, readAuthStatus(msg.Ch)
+
+	case auth.StagePolling:
+		return m, readAuthStatus(msg.Ch)
+
+	case auth.StageAuthorized:
+		if msg.Status.Token != nil {
+			if m.authStore == nil {
+				store, err := auth.LoadTokenStore(configDir())
+				if err != nil {
+					m.err = err
+					m.setupStep = stepProvider
+					return m, nil
+				}
+				m.authStore = store
+			}
+			tsKey := m.SelectedProvider + ":" + m.SelectedAccessMethod
+			m.authStore.Set(tsKey, *msg.Status.Token)
+		}
+		prov, _ := provider.Find(m.SelectedProvider)
+		m.modelsList = provider.BuildModelList(prov)
+		m.setupStep = stepModel
+		m.cursor = 0
+		return m, nil
+
+	case auth.StageError, auth.StageTimeout:
+		m.err = msg.Status.Err
+		m.setupStep = stepProvider
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func openBrowser(url string) {
+	switch runtime.GOOS {
+	case "linux":
+		exec.Command("xdg-open", url).Start()
+	case "darwin":
+		exec.Command("open", url).Start()
+	case "windows":
+		exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	}
+}
+
 func (m Model) renderDeviceAuth() string {
 	var sb strings.Builder
 	sb.WriteString(renderSetupHeader("Setup — GitHub Copilot"))
@@ -499,6 +758,45 @@ func (m Model) renderDeviceAuth() string {
 		}
 		if m.authStatus.UserCode != "" {
 			sb.WriteString(fmt.Sprintf("  2. Enter code: %s", sectionStyle.Render(m.authStatus.UserCode)))
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+
+		spin := dotFrames[m.spinnerIdx%len(dotFrames)]
+		msg := m.authStatus.Message
+		if msg == "" {
+			msg = "Waiting for authorization..."
+		}
+		sb.WriteString(dimStyle.Render(fmt.Sprintf("  %s %s", spin, msg)))
+		sb.WriteString("\n")
+
+		sb.WriteString("\n")
+		sb.WriteString(dimStyle.Render("  esc cancel"))
+
+	default:
+		sb.WriteString(dimStyle.Render("  Initializing..."))
+	}
+
+	return sb.String()
+}
+
+func (m Model) renderPkceAuth() string {
+	var sb strings.Builder
+	prov, _ := provider.Find(m.SelectedProvider)
+	title := fmt.Sprintf("Setup — %s — ChatGPT Subscription", prov.Name)
+	sb.WriteString(renderSetupHeader(title))
+	sb.WriteString("\n")
+	sb.WriteString(dimStyle.Render("  Sign in with your OpenAI account to use your ChatGPT subscription."))
+	sb.WriteString("\n\n")
+
+	switch m.authStatus.Stage {
+	case auth.StageAwaitingUser, auth.StagePolling:
+		sb.WriteString(dimStyle.Render("  A browser window should open for you to sign in."))
+		sb.WriteString("\n")
+		if m.authStatus.VerificationURI != "" {
+			sb.WriteString(dimStyle.Render("  If not, visit:"))
+			sb.WriteString("\n")
+			sb.WriteString(dimStyle.Render(fmt.Sprintf("  %s", m.authStatus.VerificationURI)))
 			sb.WriteString("\n")
 		}
 		sb.WriteString("\n")

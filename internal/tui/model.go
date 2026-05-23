@@ -25,11 +25,13 @@ const (
 type setupStep string
 
 const (
-	stepNone       setupStep = ""
-	stepProvider   setupStep = "provider"
-	stepKey        setupStep = "key"
-	stepModel      setupStep = "model"
-	stepDeviceAuth setupStep = "device_auth"
+	stepNone          setupStep = ""
+	stepProvider      setupStep = "provider"
+	stepAccessMethod  setupStep = "access_method"
+	stepKey           setupStep = "key"
+	stepModel         setupStep = "model"
+	stepDeviceAuth    setupStep = "device_auth"
+	stepPkceAuth      setupStep = "pkce_auth"
 )
 
 type phase int
@@ -112,7 +114,8 @@ type Model struct {
 	Query  string
 	Cfg    config.Config
 
-	SelectedProvider string
+	SelectedProvider     string
+	SelectedAccessMethod string
 
 	mode      modeType
 	setupStep setupStep
@@ -125,6 +128,7 @@ type Model struct {
 	inputBuffer    string
 	providersList  []provider.Provider
 	modelsList     []string
+	accessMethods  []provider.AccessMethod
 
 	phase      phase
 	spinnerIdx int
@@ -165,73 +169,78 @@ func NewQuery(sourceName, query string, cfg config.Config) Model {
 	providersList := append([]provider.Provider(nil), provider.Providers...)
 
 	return Model{
-		Source:           source,
-		Query:            query,
-		Cfg:              cfg,
-		mode:             modeQuery,
-		setupStep:        stepNone,
-		cursor:           0,
-		inputBuffer:      "",
-		providersList:    providersList,
-		modelsList:       nil,
-		SelectedProvider: "",
-		phase:            phaseInit,
-		spinnerIdx:       0,
-		readFiles:        make(map[string]string),
-		iteration:        0,
-		maxIters:         5,
-		steps:            make([]queryStep, 0),
-		displayLines:     make([]displayLine, 0),
-		scrollOffset:     0,
-		autoScroll:       true,
-		qState:           qStateInit,
+		Source:               source,
+		Query:                query,
+		Cfg:                  cfg,
+		mode:                 modeQuery,
+		setupStep:            stepNone,
+		cursor:               0,
+		inputBuffer:          "",
+		providersList:        providersList,
+		modelsList:           nil,
+		SelectedProvider:     "",
+		SelectedAccessMethod: "",
+		phase:                phaseInit,
+		spinnerIdx:           0,
+		readFiles:            make(map[string]string),
+		iteration:            0,
+		maxIters:             5,
+		steps:                make([]queryStep, 0),
+		displayLines:         make([]displayLine, 0),
+		scrollOffset:         0,
+		autoScroll:           true,
+		qState:               qStateInit,
 	}
 }
 
 func NewProviderSelect(cfg config.Config) Model {
 	providersList := append([]provider.Provider(nil), provider.Providers...)
 	return Model{
-		Cfg:              cfg,
-		mode:             modeProvider,
-		setupStep:        stepProvider,
-		cursor:           0,
-		providersList:    providersList,
-		SelectedProvider: "",
+		Cfg:                  cfg,
+		mode:                 modeProvider,
+		setupStep:            stepProvider,
+		cursor:               0,
+		providersList:        providersList,
+		SelectedProvider:     "",
+		SelectedAccessMethod: "",
 	}
 }
 
 func NewModelSelect(cfg config.Config) Model {
 	return Model{
-		Cfg:              cfg,
-		mode:             modeModel,
-		setupStep:        stepProvider,
-		cursor:           0,
-		providersList:    ProvidersWithKeys(cfg),
-		SelectedProvider: "",
+		Cfg:                  cfg,
+		mode:                 modeModel,
+		setupStep:            stepProvider,
+		cursor:               0,
+		providersList:        ProvidersWithKeys(cfg),
+		SelectedProvider:     "",
+		SelectedAccessMethod: "",
 	}
 }
 
 func NewSetup(cfg config.Config) Model {
 	providersList := append([]provider.Provider(nil), provider.Providers...)
 	return Model{
-		Cfg:              cfg,
-		mode:             modeQuery,
-		setupStep:        stepProvider,
-		cursor:           0,
-		providersList:    providersList,
-		SelectedProvider: "",
+		Cfg:                  cfg,
+		mode:                 modeQuery,
+		setupStep:            stepProvider,
+		cursor:               0,
+		providersList:        providersList,
+		SelectedProvider:     "",
+		SelectedAccessMethod: "",
 	}
 }
 
 func NewModelSelectSingle(cfg config.Config, prov provider.Provider) Model {
 	return Model{
-		Cfg:              cfg,
-		mode:             modeModel,
-		setupStep:        stepModel,
-		cursor:           0,
-		SelectedProvider: prov.Name,
-		modelsList:       provider.BuildModelList(prov),
-		providersList:    []provider.Provider{prov},
+		Cfg:                  cfg,
+		mode:                 modeModel,
+		setupStep:            stepModel,
+		cursor:               0,
+		SelectedProvider:     prov.Name,
+		SelectedAccessMethod: "",
+		modelsList:           provider.BuildModelList(prov),
+		providersList:        []provider.Provider{prov},
 	}
 }
 

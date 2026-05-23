@@ -13,7 +13,7 @@ go test ./...    # runs all tests (~190)
 
 ### Tests
 
-191 tests across 9 packages. Table-driven, standard library `testing` only (no third-party test deps).
+191 tests across 9 packages (plus `auth`). Table-driven, standard library `testing` only (no third-party test deps).
 
 | Package | Coverage | Focus |
 |---------|----------|-------|
@@ -48,15 +48,22 @@ main.go                          # CLI routing + print commands
 internal/
   config/
     config.go                    # Config struct, load, save, configPath
+  auth/
+    auth.go                      # Token, AuthMethod interface, ProviderInfo, AuthStatus, ForProvider
+    token_store.go               # TokenStore — disk-backed token persistence, IsExpired
+    device_flow.go               # DeviceFlowAuth — GitHub Copilot device flow OAuth
+    pkce.go                      # PkceAuth — PKCE OAuth (OpenAI ChatGPT subscription)
   provider/
-    provider.go                  # Provider struct, registry, Find, ResolveClient, error types
+    provider.go                  # Provider, AccessMethod structs, registry, Find, ResolveClient, error types
+    providers.json               # Provider registry data
   retry/
     retry.go                     # Shared retry Config, BackoffDelay, IsRetryableHTTP/Error
   llm/
-    client.go                    # Client struct, Send(), Stream() methods
+    client.go                    # Client (OpenAI-compat), NewClient, Send(), Stream()
+    codex_client.go              # CodexClient — OpenAI Codex Responses API (SSE stream)
     prompt.go                    # BuildSystemPrompt()
     parse.go                     # ParsedAction, ParseResponses()
-    types.go                     # ChatMessage, StreamDelta, Streamer interface
+    types.go                     # ChatMessage, StreamDelta, Streamer interface, Config
   docsource/
     source.go                    # Source, Entry, KnownSources, Find, fetch methods, retryableHTTPGet
     html.go                      # extractLinks, extractMainContent (unexported HTML helpers)
@@ -105,7 +112,10 @@ retry (standalone) ── imported by llm, docsource
 | `streamDeltaMsg` struct | `llm` | `llm.StreamDelta` |
 | `model` struct | `tui` | `tui.Model` |
 | — | `retry` | `retry.Config`, `retry.RetryableError` |
-| — | `llm` | `llm.Streamer` (interface) |
+| — | `llm` | `llm.Streamer` (interface), `llm.StreamDelta` |
+| — | `provider` | `provider.AccessMethod` |
+| — | `auth` | `auth.Token`, `auth.TokenStore`, `auth.AuthMethod` (interface) |
+| — | `auth` | `auth.PkceAuth`, `auth.DeviceFlowAuth`, `auth.AuthStatus` |
 
 ### Key constructor functions
 
@@ -159,10 +169,18 @@ retry (standalone) ── imported by llm, docsource
 
 13. **Retry logic lives in `internal/retry`**: Both `llm` and `docsource` import the shared `retry` package. Use `retry.LLMRetry` for LLM API calls (3 attempts, 2s base, 30s max) and `retry.FetchRetry` for doc fetches (3 attempts, 1s base, 10s max). Use `retry.IsRetryableError(err)` to check if an error warrants a retry.
 
+14. **`IsExpired` must use the key that found the token**: When resolving a token via `store.Get(tsKey)` with fallback to `store.Get(prov.Name)`, track which key actually found the token and use that for `IsExpired`. Otherwise, `IsExpired(tsKey)` returns `false` for a non-existent composite key, silently bypassing expiration on fallback tokens.
+
+15. **PKCE `Refresh` must set `ExpiresAt`**: The `PkceAuth.Refresh` method receives `tr.ExpiresIn` from the token response but must explicitly set `tkn.ExpiresAt` (matching what `exchangeCode` does). Without this, refreshed tokens always appear non-expired (`IsExpired` returns `false` for zero `ExpiresAt`).
+
+16. **Token store uses composite keys for access-method-specific tokens**: PKCE tokens are stored under `"provider:method_id"` (e.g. `"openai:subscription"`). Device flow tokens use plain provider name (e.g. `"github-copilot"`). API keys are in `cfg.Keys[provider]`. Use `provider.tokenStoreKey(provName, methodID)` to build the correct key.
+
+17. **`resolveClient()` in TUI checks `cfg.AccessMethod`**: In `update.go`, the model's `resolveClient()` method calls `provider.ResolveClientWithMethod` when `cfg.AccessMethod` is set, otherwise falls back to `provider.ResolveClient`. Always use `m.resolveClient()` instead of calling `provider.ResolveClient` directly from the TUI.
+
 ## Streaming pipeline
 
 ```
-docSource.FetchIndex → provider.ResolveClient → Client.Stream(goroutine)
+docSource.FetchIndex → m.resolveClient() → Client.Stream(goroutine)
   → readStreamChunk → handleStreamDelta (accumulate, show live preview)
   → handleStreamDone (parse READ_FILE/ANSWER)
   → startFileFetches (tea.Batch)
@@ -199,6 +217,7 @@ qdoc model                   # interactive model picker (TUI)
 qdoc set key <p> [key]       # set API key (prompts if key omitted, no terminal echo)
 qdoc set provider <name>     # set default provider
 qdoc set model <p> <model>   # set model for a provider
+qdoc set access <p> <m>      # set access method (e.g. "openai subscription")
 
 # Inspection
 qdoc status                  # show current config
@@ -226,16 +245,30 @@ Built-in sources defined in `internal/docsource/source.go`:
 
 ## Providers
 
-Defined in `internal/provider/provider.go`:
+Defined in `internal/provider/providers.json`:
 
-| Provider | Default Model | Env Var |
+| Provider | Default Model | Env Var / Auth |
 |----------|--------------|---------|
-| `openai` | `gpt-5.5` | `OPENAI_API_KEY` |
+| `openai` | `gpt-5.5` | `OPENAI_API_KEY` or oauth_pkce (ChatGPT) |
 | `deepseek` | `deepseek-v4-flash` | `DEEPSEEK_API_KEY` |
 | `opencode-zen` | `gpt-5.4-mini` | `OPENCODE_ZEN_API_KEY` |
 | `opencode-go` | `deepseek-v4-flash` | `OPENCODE_GO_API_KEY` |
+| `xai` | `grok-4.3` | `XAI_API_KEY` |
+| `alibaba` | `qwen3.6-plus` | `DASHSCOPE_API_KEY` |
+| `google` | `gemini-3.1-pro` | `GEMINI_API_KEY` |
+| `zhipu` | `glm-5.1` | `ZAI_API_KEY` |
+| `moonshot` | `kimi-k2.6` | `MOONSHOT_API_KEY` |
+| `github-copilot` | `gpt-5.4-mini` | oauth_device (Copilot) |
 
-All use OpenAI-compatible `/v1/chat/completions` API. Custom base URL via `QDOC_BASE_URL` env var.
+All use OpenAI-compatible `/v1/chat/completions` API, except `openai` with subscription access method which uses OpenAI Codex Responses API (`openai-codex`). Custom base URL via `QDOC_BASE_URL` env var.
+
+### Access methods
+
+Providers can support multiple access methods (e.g. API key vs OAuth subscription). The `AccessMethod` struct in `internal/provider/provider.go` defines: `ID`, `Name`, `BaseURL`, `APIType`, `AuthType`, `EnvKey`, `OAuthConfig`, `Headers`, `Description`.
+
+- `provider.KeyExistsForMethod(cfg, provName, methodID)` checks if credentials are available for a specific method
+- `provider.ResolveClientWithMethod(cfg, methodID)` resolves with a specific access method
+- `cfg.AccessMethod` stores the user's preferred access method per provider
 
 ## Config file
 
@@ -244,6 +277,7 @@ All use OpenAI-compatible `/v1/chat/completions` API. Custom base URL via `QDOC_
 ```json
 {
   "provider": "openai",
+  "access_method": "subscription",
   "keys": {"openai": "sk-..."},
   "models": {"openai": "gpt-5.5"}
 }

@@ -192,10 +192,11 @@ func runModelSelect(cfg config.Config) {
 
 func handleSet(args []string) {
 	if len(args) < 2 {
-		fmt.Fprintf(os.Stderr, "qdoc set <key|provider|model> <name> [value]\n\n")
+		fmt.Fprintf(os.Stderr, "qdoc set <key|provider|model|access> <name> [value]\n\n")
 		fmt.Fprintf(os.Stderr, "Examples:\n")
 		fmt.Fprintf(os.Stderr, "  qdoc set provider openai\n")
 		fmt.Fprintf(os.Stderr, "  qdoc set key openai sk-abc123...\n")
+		fmt.Fprintf(os.Stderr, "  qdoc set access openai subscription\n")
 		os.Exit(1)
 	}
 
@@ -275,9 +276,42 @@ func handleSet(args []string) {
 		}
 		fmt.Printf("Model for %s set to %s.\n", provName, args[2])
 
+	case "access":
+		if len(args) < 3 {
+			fmt.Fprintf(os.Stderr, "qdoc: missing access method ID\n")
+			fmt.Fprintf(os.Stderr, "Usage: qdoc set access <provider> <method-id>\n")
+			os.Exit(1)
+		}
+		provName := args[1]
+		prov, found := provider.Find(provName)
+		if !found {
+			fmt.Fprintf(os.Stderr, "qdoc: unknown provider %q\n", provName)
+			fmt.Fprintf(os.Stderr, "Available: %s\n", providerNames())
+			os.Exit(1)
+		}
+		methodID := args[2]
+		if am := prov.GetAccessMethod(methodID); am != nil {
+			cfg.AccessMethod = methodID
+			cfg.Provider = provName
+			if err := config.Save(cfg); err != nil {
+				fmt.Fprintf(os.Stderr, "qdoc: saving config: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("Access method for %s set to %s (%s).\n", provName, am.Name, am.Description)
+		} else {
+			fmt.Fprintf(os.Stderr, "qdoc: unknown access method %q for %s\n", methodID, provName)
+			if prov.HasAccessMethods() {
+				fmt.Fprintf(os.Stderr, "Available methods:\n")
+				for _, am := range prov.AccessMethods {
+					fmt.Fprintf(os.Stderr, "  %-14s %s\n", am.ID, am.Name)
+				}
+			}
+			os.Exit(1)
+		}
+
 	default:
 		fmt.Fprintf(os.Stderr, "qdoc: unknown set command %q\n", args[0])
-		fmt.Fprintf(os.Stderr, "Usage: qdoc set <key|provider|model>\n")
+		fmt.Fprintf(os.Stderr, "Usage: qdoc set <key|provider|model|access>\n")
 		os.Exit(1)
 	}
 }
@@ -297,13 +331,30 @@ func listProviders(cfg config.Config) {
 		if os.Getenv(p.EnvKey) != "" {
 			keyStatus = "env key set"
 		}
+		if cfg.AccessMethod != "" && p.HasAccessMethods() {
+			if provider.KeyExistsForMethod(cfg, p.Name, cfg.AccessMethod) {
+				keyStatus = "connected"
+			}
+		}
 		fmt.Printf("  %-14s %s%s\n", p.Name, keyStatus, active)
 		fmt.Printf("    %s\n", p.Description)
-		fmt.Printf("    env: %s\n", p.EnvKey)
 		if m, ok := cfg.Models[p.Name]; ok && m != "" {
 			fmt.Printf("    model: %s\n", m)
 		} else {
 			fmt.Printf("    model: %s (default)\n", p.DefaultModel)
+		}
+		if p.HasAccessMethods() {
+			for _, am := range p.AccessMethods {
+				marker := "  "
+				if cfg.AccessMethod == am.ID {
+					marker = "* "
+				}
+				fmt.Printf("    %s%s — %s (%s)\n", marker, am.Name, am.BaseURL, am.AuthType)
+			}
+		} else {
+			if p.EnvKey != "" {
+				fmt.Printf("    env: %s\n", p.EnvKey)
+			}
 		}
 		fmt.Println()
 	}
@@ -313,6 +364,7 @@ func listProviders(cfg config.Config) {
 	fmt.Println("  qdoc set provider <name>   switch default provider")
 	fmt.Println("  qdoc set key <name> <key>  save an API key")
 	fmt.Println("  qdoc set model <name> <m>  set model for provider")
+	fmt.Println("  qdoc set access <prov> <method>  set access method")
 }
 
 func listSources() {
@@ -343,13 +395,14 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "  qdoc status                  show current configuration\n")
 	fmt.Fprintf(os.Stderr, "  qdoc provider                interactive provider selection\n")
 	fmt.Fprintf(os.Stderr, "  qdoc model                   interactive model selection\n")
-	fmt.Fprintf(os.Stderr, "  qdoc set <key|provider> ...  configure providers\n\n")
+	fmt.Fprintf(os.Stderr, "  qdoc set <key|provider|access> ...  configure providers\n\n")
 	fmt.Fprintf(os.Stderr, "Examples:\n")
 	fmt.Fprintf(os.Stderr, "  qdoc go \"generics tutorial\"\n")
 	fmt.Fprintf(os.Stderr, "  qdoc ./my-docs \"deployment guide\"\n")
 	fmt.Fprintf(os.Stderr, "  qdoc --json go \"generics\"    agent-friendly output\n")
 	fmt.Fprintf(os.Stderr, "  qdoc provider                pick a provider interactively\n")
 	fmt.Fprintf(os.Stderr, "  qdoc set key openai          enter API key interactively\n")
+	fmt.Fprintf(os.Stderr, "  qdoc set access openai subscription   use ChatGPT subscription\n")
 }
 
 func runFirstRunSetup(cfg config.Config) {
@@ -397,6 +450,17 @@ func printStatus(cfg config.Config) {
 			keyStatus = "key configured"
 		} else if os.Getenv(prov.EnvKey) != "" {
 			keyStatus = "env key set"
+		} else if cfg.AccessMethod != "" {
+			if provider.KeyExistsForMethod(cfg, prov.Name, cfg.AccessMethod) {
+				keyStatus = "connected"
+			}
+		}
+	}
+
+	method := prov.DefaultAccessMethod()
+	if cfg.AccessMethod != "" {
+		if am := prov.GetAccessMethod(cfg.AccessMethod); am != nil {
+			method = am
 		}
 	}
 
@@ -410,12 +474,15 @@ func printStatus(cfg config.Config) {
 	fmt.Println("qdoc configuration:")
 	fmt.Println()
 	fmt.Printf("  Provider:  %s (%s)\n", provName, keyStatus)
+	if method != nil {
+		fmt.Printf("  Access:    %s\n", method.Name)
+		fmt.Printf("  Base URL:  %s\n", method.BaseURL)
+	}
 	fmt.Printf("  Model:     %s\n", modelName)
 	fmt.Println()
 
-	if found {
-		fmt.Printf("  Base URL:  %s\n", prov.BaseURL)
-		fmt.Printf("  Env var:   %s\n", prov.EnvKey)
+	if found && method != nil && method.EnvKey != "" {
+		fmt.Printf("  Env var:   %s\n", method.EnvKey)
 	}
 	fmt.Println()
 	fmt.Println("Change with: qdoc provider  |  qdoc model  |  qdoc set key <provider>")

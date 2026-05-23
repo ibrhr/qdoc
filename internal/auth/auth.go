@@ -8,11 +8,12 @@ import (
 )
 
 type Token struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token,omitempty"`
-	TokenType    string    `json:"token_type"`
-	ExpiresAt    time.Time `json:"expires_at,omitempty"`
-	Scope        string    `json:"scope,omitempty"`
+	AccessToken  string            `json:"access_token"`
+	RefreshToken string            `json:"refresh_token,omitempty"`
+	TokenType    string            `json:"token_type"`
+	ExpiresAt    time.Time         `json:"expires_at,omitempty"`
+	Scope        string            `json:"scope,omitempty"`
+	Extra        map[string]string `json:"extra,omitempty"`
 }
 
 func (t Token) IsZero() bool { return t.AccessToken == "" }
@@ -49,6 +50,8 @@ type OAuthConfig struct {
 	AuthURL       string `json:"auth_url,omitempty"`
 	ClientID      string `json:"client_id,omitempty"`
 	Scope         string `json:"scope,omitempty"`
+	RedirectURI   string `json:"redirect_uri,omitempty"`
+	Port          int    `json:"port,omitempty"`
 }
 
 type ProviderInfo struct {
@@ -86,6 +89,27 @@ func ForProvider(info ProviderInfo) (AuthMethod, error) {
 			TokenURL:      info.OAuthConfig.TokenURL,
 			ClientID:      info.OAuthConfig.ClientID,
 			Scope:         info.OAuthConfig.Scope,
+		}, nil
+	case "oauth_pkce":
+		if info.OAuthConfig == nil {
+			return nil, errors.New("oauth_pkce provider missing oauth_config")
+		}
+		cfg := info.OAuthConfig
+		port := cfg.Port
+		if port == 0 {
+			port = 1455
+		}
+		redirectURI := cfg.RedirectURI
+		if redirectURI == "" {
+			redirectURI = fmt.Sprintf("http://localhost:%d/auth/callback", port)
+		}
+		return &PkceAuth{
+			AuthURL:     cfg.AuthURL,
+			TokenURL:    cfg.TokenURL,
+			ClientID:    cfg.ClientID,
+			Scope:       cfg.Scope,
+			RedirectURI: redirectURI,
+			Port:        port,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported auth type: %s", info.AuthType)
