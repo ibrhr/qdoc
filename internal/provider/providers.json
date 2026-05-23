@@ -248,16 +248,18 @@
   },
   {
     "name": "github-copilot",
-    "default_model": "openai/gpt-5-mini",
+    "default_model": "gpt-4o-mini",
     "description": "GitHub Copilot — use your Copilot subscription (Pro/Business)",
     "models": [
-      "openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5-nano"
+      "gpt-4o",
+      "gpt-4o-mini",
+      "gpt-3.5-turbo"
     ],
     "access_methods": [
       {
         "id": "copilot",
         "name": "GitHub Copilot",
-        "base_url": "https://api.individual.githubcopilot.com/v1",
+        "base_url": "https://api.githubcopilot.com",
         "api_type": "openai-compat",
         "auth_type": "oauth_device",
         "oauth_config": {
@@ -266,10 +268,14 @@
           "client_id": "Ov23liL3baaAQEK4ZK05",
           "scope": "read:user"
         },
+        "headers": {
+          "Openai-Intent": "conversation-edits",
+          "x-initiator": "user"
+        },
         "env_key": "GITHUB_COPILOT_TOKEN"
       }
     ],
-    "base_url": "https://api.individual.githubcopilot.com/v1",
+    "base_url": "https://api.githubcopilot.com",
     "api_type": "openai-compat",
     "auth_type": "oauth_device",
     "oauth_config": {
