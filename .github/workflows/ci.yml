@@ -29,3 +29,9 @@ jobs:
       - run: go mod verify
       - run: go build ./...
       - run: go vet ./...
+      - name: Test Windows release build
+        run: |
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+          $gopath = go env GOPATH
+          & $gopath\bin\goversioninfo -o resource_windows.syso versioninfo.json
+          go build -o dist\qdoc.exe .
