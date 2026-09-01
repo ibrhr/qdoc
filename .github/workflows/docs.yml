@@ -64,16 +64,10 @@ jobs:
           test -f docs/.vitepress/dist/_headers || { echo "Missing _headers"; exit 1; }
           echo "All expected build artifacts verified."
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare
         if: env.CLOUDFLARE_API_TOKEN != ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '06232a9364277a60d1d9a39dda82ca8f' }}
         run: |
-          BRANCH="${{ github.head_ref || github.ref_name }}"
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title || 'Deploy docs' }}"
-          npx --prefix docs wrangler pages deploy docs/.vitepress/dist \
-            --project-name=qdoc \
-            --branch="$BRANCH" \
-            --commit-hash="${{ github.sha }}" \
-            --commit-message="$COMMIT_MSG"
+          npx wrangler deploy

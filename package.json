@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "npm --prefix docs run build",
+    "deploy": "wrangler deploy",
     "docs:dev": "npm --prefix docs run dev",
     "docs:build": "npm --prefix docs run build",
     "docs:preview": "npm --prefix docs run preview",
@@ -21,6 +22,16 @@
     "install.js",
     "bin/qdoc.js"
   ],
-  "os": ["linux", "darwin", "win32"],
-  "cpu": ["x64", "arm64"]
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "devDependencies": {
+    "wrangler": "^4.127.1"
+  }
 }

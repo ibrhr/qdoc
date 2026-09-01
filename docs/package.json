@@ -7,7 +7,7 @@
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
-    "deploy": "wrangler pages deploy .vitepress/dist --project-name=qdoc"
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "vitepress": "^1.5.0",
