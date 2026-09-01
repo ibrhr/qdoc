@@ -6,6 +6,7 @@
 
 # Build artifacts
 /dist/
+/.vitepress/
 /bin/*
 !/bin/qdoc.js
 *.syso

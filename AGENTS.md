@@ -299,5 +299,5 @@ Package name: `qdoc-agent` (defined in `package.json`). `bin/qdoc.js` proxies to
 
 ## Docs site
 
-Deploys automatically via **Cloudflare Pages** (native Git integration on push to `main`).
-Root directory: `docs`, Build command: `npm run build`, Output directory: `.vitepress/dist`.
+Deploys automatically via **Cloudflare Pages / Workers** (native Git integration on push to `main`).
+Root directory: `/` (root), Build command: `npm run build` (or `npm --prefix docs run build`), Output directory: `docs/.vitepress/dist`.
