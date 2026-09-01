@@ -8,6 +8,7 @@
     "qdoc": "bin/qdoc.js"
   },
   "scripts": {
+    "build": "npm --prefix docs run build",
     "postinstall": "node install.js"
   },
   "files": [

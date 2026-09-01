@@ -123,6 +123,10 @@ async function main() {
 }
 
 main().catch((err) => {
+  if (process.env.CF_PAGES || process.env.CLOUDFLARE_PAGES || (err.message && err.message.includes("404"))) {
+    console.warn(`qdoc install notice (v${VERSION}): ${err.message} — skipping binary download`);
+    process.exit(0);
+  }
   console.error(`qdoc install failed (v${VERSION}):`, err.message);
   process.exit(1);
 });
