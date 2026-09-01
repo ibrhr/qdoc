@@ -7,6 +7,9 @@
   "bin": {
     "qdoc": "bin/qdoc.js"
   },
+  "workspaces": [
+    "docs"
+  ],
   "scripts": {
     "build": "npm --prefix docs run build",
     "postinstall": "node install.js"
