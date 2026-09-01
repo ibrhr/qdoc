@@ -48,9 +48,6 @@ async function fetch(url) {
       return await fetchWithRetry(url);
     } catch (err) {
       lastErr = err;
-      if (err.message === "HTTP 404") {
-        throw err;
-      }
       if (attempt < MAX_RETRIES) {
         const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1) * (0.7 + Math.random() * 0.6);
         process.stderr.write(`qdoc: download failed (attempt ${attempt}/${MAX_RETRIES}): ${err.message}, retrying in ${(delay / 1000).toFixed(1)}s\n`);
@@ -62,11 +59,6 @@ async function fetch(url) {
 }
 
 async function main() {
-  if (process.env.CF_PAGES || process.env.CLOUDFLARE_PAGES || process.env.CF_PAGES_COMMIT_SHA || process.env.CF_PAGES_BRANCH) {
-    console.warn(`qdoc install notice: Cloudflare build environment detected — skipping binary download`);
-    return;
-  }
-
   const pkgDir = join(__dirname);
   const ext = process.platform === "win32" ? ".exe" : "";
   const dest = join(pkgDir, "qdoc_bin" + ext);
@@ -131,10 +123,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  if (process.env.CF_PAGES || process.env.CLOUDFLARE_PAGES || (err.message && err.message.includes("404"))) {
-    console.warn(`qdoc install notice (v${VERSION}): ${err.message} — skipping binary download`);
-    process.exit(0);
-  }
   console.error(`qdoc install failed (v${VERSION}):`, err.message);
   process.exit(1);
 });

@@ -1,0 +1,28 @@
+# Cloudflare Pages Custom Headers
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+# Default security headers for all routes
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  X-XSS-Protection: 1; mode=block
+
+# Immutable hashed assets produced by VitePress (JS, CSS, Web Fonts)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Install script for curl | bash usage
+/install.sh
+  Content-Type: text/x-shellscript; charset=utf-8
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300, must-revalidate
+
+# Favicon and icons
+/favicon.svg
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# HTML documents: always revalidate so users and agents get fresh content
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

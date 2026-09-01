@@ -6,7 +6,6 @@
 
 # Build artifacts
 /dist/
-/.vitepress/
 /bin/*
 !/bin/qdoc.js
 *.syso
@@ -21,13 +20,13 @@
 .DS_Store
 Thumbs.db
 
-.wrangler/
 # Dependencies
 vendor/
-node_modules/
 docs/node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+.wrangler/
+**/.wrangler/
 
 # Test
 *.test

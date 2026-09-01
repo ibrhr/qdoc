@@ -8,25 +8,9 @@
 export PATH=$PATH:/usr/local/go/bin  # Go 1.26.3 lives here
 go build ./...   # builds all packages
 go vet ./...
-go test ./...    # runs all tests (~190)
+go test ./...    # runs all tests
+go test -race ./...
 ```
-
-### Tests
-
-191 tests across 9 packages (plus `auth`). Table-driven, standard library `testing` only (no third-party test deps).
-
-| Package | Coverage | Focus |
-|---------|----------|-------|
-| `retry` | 100% | BackoffDelay, IsRetryableHTTP, IsRetryableError |
-| `provider` | 100% | Find, ResolveClient, KeyExists, env overrides |
-| `sessionlog` | 93% | New, Log, sanitize, section, raw, close |
-| `llm` | 86% | ParseResponses, BuildSystemPrompt, Client.Send/Stream (mock servers) |
-| `config` | 74% | Load, Save, Default, nil-map normalization |
-| `docsource` | 72% | extractLinks, extractMainContent, stripHTML, blockedPath, FetchIndex/FetchContent (mock servers + temp dirs) |
-| `tui` | 17% | renderMarkdown, renderInlineMarkdown, handleStreamDelta, handleDocContent, remainingFetching, key handling |
-| `runner` | 14% | Run(unknown source), Step/Result types, contains helper |
-
-Run with race detector: `go test -race ./...` (llm package takes ~23s due to HTTP retry timing).
 
 ## Docs site
 
@@ -67,6 +51,8 @@ internal/
   docsource/
     source.go                    # Source, Entry, KnownSources, Find, fetch methods, retryableHTTPGet
     html.go                      # extractLinks, extractMainContent (unexported HTML helpers)
+  runner/
+    runner.go                    # Headless query runner (--no-tui, --json)
   tui/
     model.go                     # Model struct, phase/state types, constructors (New*), Init
     update.go                    # Update + query-mode handlers + streaming pipeline
@@ -89,33 +75,12 @@ provider ←→ (imports config, llm for ResolveClient)
 llm ←── docsource (for BuildSystemPrompt)
   ↑         ↑
   │         │
-  └── tui ←─┘ (imports config, provider, llm, docsource)
-       ↑
-       │
-     main (imports everything)
+  ├─── tui ─┘ (imports config, provider, llm, docsource)
+  ├── runner  (imports config, provider, llm, docsource)
+  └── main    (imports everything)
 
 retry (standalone) ── imported by llm, docsource
 ```
-
-### Exported types mapping
-
-| Old (package main) | New package | Exported as |
-|---|---|---|
-| `config` struct | `config` | `config.Config` |
-| `provider` struct | `provider` | `provider.Provider` |
-| `providers` var | `provider` | `provider.Providers` |
-| `docSource` struct | `docsource` | `docsource.Source` |
-| `docEntry` struct | `docsource` | `docsource.Entry` |
-| `llmClient` struct | `llm` | `llm.Client` |
-| `chatMessage` struct | `llm` | `llm.ChatMessage` |
-| `parsedAction` struct | `llm` | `llm.ParsedAction` |
-| `streamDeltaMsg` struct | `llm` | `llm.StreamDelta` |
-| `model` struct | `tui` | `tui.Model` |
-| — | `retry` | `retry.Config`, `retry.RetryableError` |
-| — | `llm` | `llm.Streamer` (interface), `llm.StreamDelta` |
-| — | `provider` | `provider.AccessMethod` |
-| — | `auth` | `auth.Token`, `auth.TokenStore`, `auth.AuthMethod` (interface) |
-| — | `auth` | `auth.PkceAuth`, `auth.DeviceFlowAuth`, `auth.AuthStatus` |
 
 ### Key constructor functions
 
@@ -163,7 +128,6 @@ retry (standalone) ── imported by llm, docsource
     - Don't say `"exactly one { at start and one } at end"` — models worry about parser strictness
     - Don't give contradictory number ranges (`2-3` vs `up to 3` vs `a JSON action` singular)
     - Don't use prescriptive arrow rules (`"How do I X?" → /doc/foo`) — turns models into rule-matchers instead of readers
-    - Keep it simple: here are the sections, here are the files, here's the query
 
 12. **`filesPending` counter in remainingFetching**: The TUI tracks pending file fetches via a per-batch `filesPending` counter (set in `startFileFetches`, decremented in `handleDocContent`). Do NOT use `len(m.pendingReads) - len(m.readFiles)` — `readFiles` is cumulative across iterations, so the subtraction gives incorrect results on iteration 2+.
 
@@ -230,37 +194,11 @@ qdoc                         # interactive setup (no key configured); otherwise 
 
 ## Documentation sources
 
-Built-in sources defined in `internal/docsource/source.go`:
-
-| Name | URL | Index |
-|------|-----|-------|
-| `go` | go.dev/doc | Parsed from `/doc/` page |
-| `python` | docs.python.org/3 | Parsed from `/3/` page |
-| `nextjs` | nextjs.org/docs | Parsed from `/docs` sidebar |
-| `fastapi` | fastapi.tiangolo.com | Parsed from `/` page |
-| `react` | react.dev | Parsed from `/learn` sidebar |
-| `pydantic` | pydantic.dev | Parsed from `/docs/validation/latest/` page |
-
-`./path` → local directory: recursively walks `.md`, `.mdx`, `.html`, `.rst`, `.txt`, `.adoc`.
+Built-in sources defined in `internal/docsource/source.go`. Run `qdoc sources` for the live list. Supports `./path` for local directories recursively parsing `.md`, `.mdx`, `.html`, `.rst`, `.txt`, `.adoc`.
 
 ## Providers
 
-Defined in `internal/provider/providers.json`:
-
-| Provider | Default Model | Env Var / Auth |
-|----------|--------------|---------|
-| `openai` | `gpt-5.5` | `OPENAI_API_KEY` or oauth_pkce (ChatGPT) |
-| `deepseek` | `deepseek-v4-flash` | `DEEPSEEK_API_KEY` |
-| `opencode-zen` | `gpt-5.4-mini` | `OPENCODE_ZEN_API_KEY` |
-| `opencode-go` | `deepseek-v4-flash` | `OPENCODE_GO_API_KEY` |
-| `xai` | `grok-4.3` | `XAI_API_KEY` |
-| `alibaba` | `qwen3.6-plus` | `DASHSCOPE_API_KEY` |
-| `google` | `gemini-3.1-pro` | `GEMINI_API_KEY` |
-| `zhipu` | `glm-5.1` | `ZAI_API_KEY` |
-| `moonshot` | `kimi-k2.6` | `MOONSHOT_API_KEY` |
-| `github-copilot` | `gpt-5.4-mini` | oauth_device (Copilot) |
-
-All use OpenAI-compatible `/v1/chat/completions` API, except `openai` with subscription access method which uses OpenAI Codex Responses API (`openai-codex`). Custom base URL via `QDOC_BASE_URL` env var.
+Defined in `internal/provider/providers.json`. All use OpenAI-compatible `/v1/chat/completions` API by default, except providers with custom access methods (e.g. `openai` subscription using Codex Responses API). Custom base URL via `QDOC_BASE_URL` env var.
 
 ### Access methods
 
@@ -283,8 +221,6 @@ Providers can support multiple access methods (e.g. API key vs OAuth subscriptio
 }
 ```
 
-Emptied keys/models maps are re-initialized to non-nil on load.
-
 ## Install script
 
 `docs/public/install.sh` — POSIX bootstrap re-execs with bash if needed. Installs binary to `~/.qdoc/bin`, adds to shell config. Supports Linux, macOS, and Windows (WSL, Git Bash, MSYS2, Cygwin). Options: `--version`, `--no-modify-path`.
@@ -297,7 +233,6 @@ Package name: `qdoc-agent` (defined in `package.json`). `bin/qdoc.js` proxies to
 
 `.github/workflows/release.yml` — triggered by git tag `v*`. Builds Go binaries for all platforms, attaches to GitHub Release, publishes to npm (`qdoc-agent`).
 
-## Docs site
+## Docs site deployment
 
-Deploys automatically via **Cloudflare Pages / Workers** (native Git integration on push to `main`).
-Root directory: `/` (root), Build command: `npm run build` (or `npm --prefix docs run build`), Output directory: `docs/.vitepress/dist`.
+`.github/workflows/docs.yml` — builds VitePress docs and verifies artifacts on push and PRs. Paired with Cloudflare Pages project `qdoc` (configured via `wrangler.jsonc`, `_headers`, and `_redirects`).

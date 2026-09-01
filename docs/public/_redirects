@@ -1,0 +1,3 @@
+# Cloudflare Pages Redirects
+# https://developers.cloudflare.com/pages/configuration/redirects/
+# Syntax: /source /target [301|302|200]

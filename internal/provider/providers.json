@@ -285,5 +285,35 @@
       "scope": "read:user"
     },
     "env_key": "GITHUB_COPILOT_TOKEN"
+  },
+  {
+    "name": "cursor",
+    "default_model": "gpt-5.5",
+    "description": "Cursor — use your Cursor subscription",
+    "models": [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "claude-4.7-opus",
+      "claude-4.6-sonnet",
+      "gemini-3.1-pro",
+      "grok-4.3",
+      "kimi-k2.6",
+      "cursor-composer-2.5"
+    ],
+    "access_methods": [
+      {
+        "id": "api-key",
+        "name": "Cursor API Key",
+        "api_type": "cursor-acp",
+        "auth_type": "api_key",
+        "env_key": "CURSOR_API_KEY",
+        "description": "Use your Cursor API key. Run 'agent login' first."
+      }
+    ],
+    "base_url": "",
+    "api_type": "cursor-acp",
+    "auth_type": "api_key",
+    "env_key": "CURSOR_API_KEY"
   }
 ]

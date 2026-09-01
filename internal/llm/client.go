@@ -58,6 +58,8 @@ func NewClient(apiType string, cfg Config) (Client, error) {
 			Provider: cfg.Provider,
 			Headers:  cfg.Headers,
 		}, nil
+	case "cursor-acp":
+		return newCursorClient(cfg)
 	default:
 		return nil, fmt.Errorf("unsupported api type: %s", apiType)
 	}

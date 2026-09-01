@@ -1,6 +1,15 @@
 import { defineConfig } from 'vitepress'
+import { createRequire } from 'module'
 
-const version = typeof process !== 'undefined' ? (process.env.QDOC_VERSION || 'dev') : 'dev';
+const require = createRequire(import.meta.url)
+const pkg = require('../package.json')
+
+const version =
+  (typeof process !== 'undefined'
+    ? process.env.QDOC_VERSION || process.env.CF_PAGES_COMMIT_SHA?.slice(0, 7)
+    : undefined) ||
+  pkg.version ||
+  '0.1.5'
 
 export default defineConfig({
   title: 'qdoc — Agent for Agents',

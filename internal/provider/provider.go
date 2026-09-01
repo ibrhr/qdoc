@@ -280,6 +280,21 @@ func ResolveClientWithMethod(cfg config.Config, accessMethodID string) (llm.Clie
 		return nil, err
 	}
 
+	if apiType == "cursor-acp" {
+		// cursor-acp follows the api_key resolution path regardless of the
+		// declared auth_type — it uses agent login for primary auth but still
+		// needs the API key token to be resolved (if available) for --api-key passthrough.
+		token, _ := resolveAPIKeyToken(method.EnvKey, prov.Name, cfg)
+		return llm.NewClient(apiType, llm.Config{
+			Auth:     authMethod,
+			Token:    token,
+			BaseURL:  baseURL,
+			Model:    model,
+			Provider: prov.Name,
+			Headers:  mergeHeaders(method.Headers),
+		})
+	}
+
 	tsKey := tokenStoreKey(prov.Name, method.ID)
 
 	switch info.AuthType {

@@ -1,0 +1,79 @@
+name: Docs CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - 'wrangler.jsonc'
+      - '.node-version'
+      - '.nvmrc'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - 'wrangler.jsonc'
+      - '.node-version'
+      - '.nvmrc'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build & Verify Docs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Install dependencies
+        working-directory: docs
+        run: npm ci
+
+      - name: Build documentation site
+        working-directory: docs
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo "")
+          if [ -n "$VERSION" ]; then
+            export QDOC_VERSION="$VERSION"
+          fi
+          npm run build
+
+      - name: Verify build outputs
+        run: |
+          test -f docs/.vitepress/dist/index.html || { echo "Missing index.html"; exit 1; }
+          test -f docs/.vitepress/dist/404.html || { echo "Missing 404.html"; exit 1; }
+          test -f docs/.vitepress/dist/install.sh || { echo "Missing install.sh"; exit 1; }
+          test -f docs/.vitepress/dist/_headers || { echo "Missing _headers"; exit 1; }
+          echo "All expected build artifacts verified."
+
+      - name: Deploy to Cloudflare Pages
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '06232a9364277a60d1d9a39dda82ca8f' }}
+        run: |
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title || 'Deploy docs' }}"
+          npx --prefix docs wrangler pages deploy docs/.vitepress/dist \
+            --project-name=qdoc \
+            --branch="$BRANCH" \
+            --commit-hash="${{ github.sha }}" \
+            --commit-message="$COMMIT_MSG"
