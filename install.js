@@ -60,9 +60,15 @@ async function fetch(url) {
 
 async function main() {
   const pkgDir = join(__dirname);
+
+  // Skip postinstall binary download in repository development or Cloudflare / CI build environments
+  if (existsSync(join(pkgDir, "main.go")) || process.env.CF_PAGES || process.env.SKIP_QDOC_INSTALL) {
+    process.stderr.write("qdoc: skipping binary download in source repository / build environment\n");
+    return;
+  }
+
   const ext = process.platform === "win32" ? ".exe" : "";
   const dest = join(pkgDir, "qdoc_bin" + ext);
-
   if (existsSync(dest)) {
     try {
       const out = execSync(`"${dest}" --version`, { encoding: "utf-8" });
